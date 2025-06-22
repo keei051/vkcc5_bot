@@ -4,7 +4,7 @@ import logging
 import re
 from urllib.parse import urlparse, quote
 import aiohttp
-from aiogram import Bot, Dispatcher, Router, F
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
