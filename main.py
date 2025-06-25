@@ -426,8 +426,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
     uid = str(cb.from_user.id)
     scope = cb.data.split(':')[1]
     links = db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name IS NULL', (uid,)) if scope == 'root' else db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name = ?', (uid, scope))
-    
-    text = f'📊 <b>Статистика {"всех ссылок" if scope == "root" else f"папки \"{scope}\""}</b>\n\n'
+text = f'📊 <b>Статистика {"всех ссылок" if scope == "root" else f"папки \"{scope}\""}</b>\n\n'
     if not links:
         text += "👁 Нет данных для отображения."
         await loading_msg.delete()
