@@ -1372,4 +1372,9 @@ async def view_group(cb: types.CallbackQuery, state: FSMContext):
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in items))
         buttons.extend(InlineKeyboardButton(text=f"🔗 {l['title']} ({stats[i]['views']})", callback_data=f'link_action:{name}:{i}') for i, l in enumerate(items))
     kb = make_kb(buttons, row_width=1, extra_buttons=[
-        InlineKeyboardButton(text='
+        InlineKeyboardButton(text='📊 Статистика папки', callback_data=f'show_stats:{name}'),
+        InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu'),
+        InlineKeyboardButton(text='⬅ Назад', callback_data='show_groups')
+    ])
+    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+    await cb.answer()
