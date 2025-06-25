@@ -1397,3 +1397,33 @@ async def del_group(cb: types.CallbackQuery, state: FSMContext):
         "Выберите папку для удаления:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb
+    @router.callback_query(F.data.startswith("confirm_delete_group:"))
+@handle_error
+async def confirm_delete_group(cb: types.CallbackQuery, state: FSMContext):
+    logger.info(f"Handling confirm_delete_group for user {cb.from_user.id}, data={cb.data}")
+    await state.clear()
+    group_name = cb.data.split(':', 1)[1]
+    kb = make_kb([
+        InlineKeyboardButton(text='✅ Удалить', callback_data=f'do_delete_group:{group_name}'),
+        InlineKeyboardButton(text='🚫 Отмена', callback_data='menu_groups')
+    ])
+    text = (
+        f"⚠️ Удалить папку \"{group_name}\"?\n\n"
+        f"Ссылки останутся, но без привязки к папке.\n\n"
+        f"Подтвердите удаление:"
+    )
+    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+    await cb.answer()
+
+
+@router.callback_query(F.data.startswith("do_delete_group:"))
+@handle_error
+async def do_delete_group(cb: types.CallbackQuery, state: FSMContext):
+    logger.info(f"Handling do_delete_group for user {cb.from_user.id}, data={cb.data}")
+    group_name = cb.data.split(':', 1)[1]
+    uid = str(cb.from_user.id)
+    db.execute('UPDATE links SET group_name = NULL WHERE user_id = ? AND group_name = ?', (uid, group_name))
+    db.execute('DELETE FROM groups WHERE user_id = ? AND name = ?', (uid, group_name))
+    text = f"✅ Папка \"{group_name}\" удалена. Ссылки остались без папки."
+    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
+    await cb.answer()
