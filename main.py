@@ -1,4 +1,3 @@
-python
 import asyncio
 import datetime
 import logging
@@ -10,7 +9,7 @@ from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from bs4 import BeautifulSoup
 import sqlite3
 
@@ -93,7 +92,7 @@ def handle_error(handler):
             reply = get_main_menu()
             text = f'❌ Ошибка ({datetime.datetime.now().strftime("%H:%M:%S")}): {str(e)[:50]}'
             try:
-                if isinstance(args[0], CallbackQuery):
+                if isinstance(args[0], types.CallbackQuery):
                     try:
                         await args[0].message.edit_text(text, parse_mode="HTML", reply_markup=reply)
                     except Exception as bad_request:
@@ -103,7 +102,7 @@ def handle_error(handler):
                         else:
                             await args[0].message.answer(text, parse_mode="HTML", reply_markup=reply)
                     await args[0].answer()
-                elif isinstance(args[0], Message):
+                elif isinstance(args[0], types.Message):
                     await args[0].answer(text, parse_mode="HTML", reply_markup=reply)
             except Exception as inner_e:
                 logger.error(f"Failed to handle error in {handler.__name__}: {inner_e}")
@@ -239,7 +238,7 @@ def is_valid_url(url: str) -> bool:
         return False
     return not re.search(r'\b(javascript|vbscript|eval|onerror|onload|onclick)\b', url.lower(), re.IGNORECASE)
 
-async def cleanup_chat(message: Message, count=5):
+async def cleanup_chat(message: types.Message, count=5):
     for i in range(count):
         try:
             await bot.delete_message(message.chat.id, message.message_id - i)
@@ -302,7 +301,7 @@ def get_post_add_menu():
 # Handlers
 @router.message(Command("start"))
 @handle_error
-async def cmd_start(message: Message, state: FSMContext):
+async def cmd_start(message: types.Message, state: FSMContext):
     logger.info(f"Received /start from user {message.from_user.id}")
     await state.clear()
     welcome_text = (
@@ -317,14 +316,14 @@ async def cmd_start(message: Message, state: FSMContext):
 
 @router.message(Command("cancel"))
 @handle_error
-async def cmd_cancel(message: Message, state: FSMContext):
+async def cmd_cancel(message: types.Message, state: FSMContext):
     logger.info(f"Received /cancel from user {message.from_user.id}")
     await state.clear()
     await message.answer('✅ Действие отменено. Выберите, что делать дальше:', reply_markup=get_main_menu())
 
 @router.callback_query(F.data == "menu")
 @handle_error
-async def main_menu_handler(cb: CallbackQuery, state: FSMContext):
+async def main_menu_handler(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu for user {cb.from_user.id}")
     await state.clear()
     text = "🏠 <b>Главное меню</b>\n\nВыберите действие:"
@@ -333,7 +332,7 @@ async def main_menu_handler(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "cancel")
 @handle_error
-async def cancel_action(cb: CallbackQuery, state: FSMContext):
+async def cancel_action(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling cancel for user {cb.from_user.id}")
     await state.clear()
     text = "✅ Действие отменено. Выберите, что делать дальше:"
@@ -342,7 +341,7 @@ async def cancel_action(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "menu_links")
 @handle_error
-async def menu_links(cb: CallbackQuery, state: FSMContext):
+async def menu_links(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_links for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -358,7 +357,7 @@ async def menu_links(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "menu_groups")
 @handle_error
-async def menu_groups(cb: CallbackQuery, state: FSMContext):
+async def menu_groups(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_groups for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -374,7 +373,7 @@ async def menu_groups(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "menu_stats")
 @handle_error
-async def menu_stats(cb: CallbackQuery, state: FSMContext):
+async def menu_stats(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_stats for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -391,7 +390,7 @@ async def menu_stats(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "clear_all")
 @handle_error
-async def confirm_clear(cb: CallbackQuery, state: FSMContext):
+async def confirm_clear(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling clear_all for user {cb.from_user.id}")
     await state.clear()
     kb = make_kb([
@@ -408,7 +407,7 @@ async def confirm_clear(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "confirm_delete_all")
 @handle_error
-async def do_clear(cb: CallbackQuery, state: FSMContext):
+async def do_clear(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling confirm_delete_all for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     db.execute('DELETE FROM links WHERE user_id = ?', (uid,))
@@ -420,7 +419,7 @@ async def do_clear(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("show_stats:"))
 @handle_error
-async def show_stats(cb: CallbackQuery, state: FSMContext):
+async def show_stats(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling show_stats for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     loading_msg = await bot.send_message(cb.message.chat.id, '⏳ Загружаем статистику...')
@@ -463,7 +462,7 @@ async def show_stats(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "stats_by_date")
 @handle_error
-async def stats_by_date(cb: CallbackQuery, state: FSMContext):
+async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling stats_by_date for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -476,7 +475,7 @@ async def stats_by_date(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.waiting_for_stats_date))
 @handle_error
-async def process_stats_date(message: Message, state: FSMContext):
+async def process_stats_date(message: types.Message, state: FSMContext):
     logger.info(f"Processing stats date from user {message.from_user.id}")
     dates = message.text.strip().split()
     if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
@@ -520,7 +519,7 @@ async def process_stats_date(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "select_link_stats")
 @handle_error
-async def select_link_stats(cb: CallbackQuery, state: FSMContext):
+async def select_link_stats(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling select_link_stats for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -546,7 +545,7 @@ async def select_link_stats(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("single_link_stats:"))
 @handle_error
-async def single_link_stats(cb: CallbackQuery, state: FSMContext):
+async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling single_link_stats for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     loading_msg = await bot.send_message(cb.message.chat.id, '⏳ Загружаем статистику...')
@@ -580,7 +579,7 @@ async def single_link_stats(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "group_stats_select")
 @handle_error
-async def group_stats_select(cb: CallbackQuery, state: FSMContext):
+async def group_stats_select(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling group_stats_select for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -606,7 +605,7 @@ async def group_stats_select(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "add_single")
 @handle_error
-async def add_single(cb: CallbackQuery, state: FSMContext):
+async def add_single(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling add_single for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -621,7 +620,7 @@ async def add_single(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.waiting_for_link))
 @handle_error
-async def process_link(message: Message, state: FSMContext):
+async def process_link(message: types.Message, state: FSMContext):
     logger.info(f"Processing link from user {message.from_user.id}")
     url = message.text.strip()
     if not is_valid_url(url):
@@ -660,7 +659,7 @@ async def process_link(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "use_suggested_title")
 @handle_error
-async def use_suggested_title(cb: CallbackQuery, state: FSMContext):
+async def use_suggested_title(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling use_suggested_title for user {cb.from_user.id}")
     data = await state.get_data()
     title = sanitize_input(data.get('suggested_title') or data['original'][:50])
@@ -681,7 +680,7 @@ async def use_suggested_title(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "enter_title")
 @handle_error
-async def enter_title(cb: CallbackQuery, state: FSMContext):
+async def enter_title(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling enter_title for user {cb.from_user.id}")
     text = (
         "✏️ <b>Введите своё название</b>\n\n"
@@ -693,7 +692,7 @@ async def enter_title(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.waiting_for_title))
 @handle_error
-async def process_title(message: Message, state: FSMContext):
+async def process_title(message: types.Message, state: FSMContext):
     logger.info(f"Processing title from user {message.from_user.id}")
     title = sanitize_input(message.text)
     if not title:
@@ -716,18 +715,19 @@ async def process_title(message: Message, state: FSMContext):
         "Что дальше?"
     )
     await message.answer(text, parse_mode="HTML", reply_markup=get_post_add_menu())
+    await state.update_data()
     await state.update_data(last_added_entry={'title': title, 'short': data['short'], 'original': data['original']})
     await cleanup_chat(message, count=2)
     await state.set_state(LinkForm.choosing_group)
 
 @router.callback_query(F.data == "add_bulk")
 @handle_error
-async def add_bulk(cb: CallbackQuery, state: FSMContext):
+async def add_bulk(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling add_bulk for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "🔗 <b>Добавление нескольких ссылок</b>\n\n"
-        "Отправьте список ссылок, по одной на строку, например:\n"
+        "🔗 Добавление нескольких ссылок\n\n"
+        "Отправьте список ссылок, по одной на строке, например:\n"
         "https://example.com\n"
         "https://anotherexample.com\n\n"
         "Для отмены нажмите кнопку ниже 👇"
@@ -738,11 +738,11 @@ async def add_bulk(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.bulk_links))
 @handle_error
-async def process_bulk_links(message: Message, state: FSMContext):
+async def process_bulk_links(message: types.Message, state: FSMContext):
     logger.info(f"Processing bulk links from user {message.from_user.id}")
     lines = [l.strip() for l in message.text.splitlines() if l.strip()]
-    valid = [l for l in lines if is_valid_url(l)]
-    if not valid:
+    valid_links = [l for l in lines if is_valid_url(l)]
+    if not valid_links:
         text = (
             "❌ <b>Нет валидных ссылок</b>\n\n"
             "Убедитесь, что ссылки начинаются с http:// или https://.\n"
@@ -750,19 +750,19 @@ async def process_bulk_links(message: Message, state: FSMContext):
         )
         await message.answer(text, parse_mode="HTML", reply_markup=cancel_kb)
         return
-    await state.update_data(bulk_links=valid, success=[], failed=[])
+    await state.update_data(bulk_links=valid_links, success=[], failed=[])
     kb = make_kb([
         InlineKeyboardButton(text='📝 Ввести названия вручную', callback_data='bulk_enter_titles'),
         InlineKeyboardButton(text='🔗 Использовать URL как названия', callback_data='bulk_use_url'),
         InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
     ])
-    text = f"✅ <b>Найдено {len(valid)} валидных ссылок</b>\n\nВыберите, как назвать ссылки:"
+    text = f"✅ <b>Найдено {len(valid_links)} валидных ссылок</b>\n\nВыберите, как назвать ссылки:"
     await message.answer(text, parse_mode="HTML", reply_markup=kb)
     await cleanup_chat(message)
 
 @router.callback_query(F.data == "bulk_use_url")
 @handle_error
-async def bulk_use_url(cb: CallbackQuery, state: FSMContext):
+async def bulk_use_url(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling bulk_use_url for user {cb.from_user.id}")
     data = await state.get_data()
     uid = str(cb.from_user.id)
@@ -796,7 +796,7 @@ async def bulk_use_url(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "bulk_enter_titles")
 @handle_error
-async def bulk_enter_titles(cb: CallbackQuery, state: FSMContext):
+async def bulk_enter_titles(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling bulk_enter_titles for user {cb.from_user.id}")
     data = await state.get_data()
     await state.update_data(bulk_index=0)
@@ -811,8 +811,8 @@ async def bulk_enter_titles(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.bulk_titles))
 @handle_error
-async def process_bulk_titles(message: Message, state: FSMContext):
-    logger.info(f"Processing bulk titles from user {message.from_user.id}")
+async def process_bulk_titles(message: types.Message, state: FSMContext):
+    logger.info(f"Processing bulk titles for user {message.from_user.id}")
     data = await state.get_data()
     idx = data['bulk_index']
     url = data['bulk_links'][idx]
@@ -864,7 +864,7 @@ async def process_bulk_titles(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "bulk_to_group")
 @handle_error
-async def bulk_to_group(cb: CallbackQuery, state: FSMContext):
+async def bulk_to_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling bulk_to_group for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     groups = db.execute('SELECT name FROM groups WHERE user_id = ?', (uid,))
@@ -894,7 +894,7 @@ async def bulk_to_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "bulk_skip_group")
 @handle_error
-async def bulk_skip_group(cb: CallbackQuery, state: FSMContext):
+async def bulk_skip_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling bulk_skip_group for user {cb.from_user.id}")
     text = "✅ Ссылки сохранены без папки. Что дальше?"
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
@@ -903,7 +903,7 @@ async def bulk_skip_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("bulk_assign:"))
 @handle_error
-async def bulk_assign_to_group(cb: CallbackQuery, state: FSMContext):
+async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling bulk_assign for user {cb.from_user.id}, data={cb.data}")
     group_name = cb.data.split(':', 1)[1]
     data = await state.get_data()
@@ -943,7 +943,7 @@ async def bulk_assign_to_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "my_links")
 @handle_error
-async def my_links(cb: CallbackQuery, state: FSMContext):
+async def my_links(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling my_links for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -972,7 +972,7 @@ async def my_links(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("link_action:"))
 @handle_error
-async def link_action(cb: CallbackQuery, state: FSMContext):
+async def link_action(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling link_action for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, idx = cb.data.split(':', 2)
@@ -1002,7 +1002,7 @@ async def link_action(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("togroup:"))
 @handle_error
-async def togroup(cb: CallbackQuery, state: FSMContext):
+async def togroup(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling togroup for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, idx = cb.data.split(':', 2)
@@ -1036,7 +1036,7 @@ async def togroup(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("assign:"))
 @handle_error
-async def assign_to_group_single(cb: CallbackQuery, state: FSMContext):
+async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling assign for user {cb.from_user.id}, data={cb.data}")
     group_name = cb.data.split(':', 1)[1]
     data = await state.get_data()
@@ -1075,7 +1075,7 @@ async def assign_to_group_single(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "ask_to_group")
 @handle_error
-async def ask_to_group(cb: CallbackQuery, state: FSMContext):
+async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling ask_to_group for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     data = await state.get_data()
@@ -1111,7 +1111,7 @@ async def ask_to_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "skip_group")
 @handle_error
-async def skip_group(cb: CallbackQuery, state: FSMContext):
+async def skip_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling skip_group for user {cb.from_user.id}")
     text = "✅ Ссылка сохранена без папки. Что дальше?"
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
@@ -1120,7 +1120,7 @@ async def skip_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("single_assign:"))
 @handle_error
-async def single_assign_to_group(cb: CallbackQuery, state: FSMContext):
+async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling single_assign for user {cb.from_user.id}, data={cb.data}")
     group_name = cb.data.split(':', 1)[1]
     data = await state.get_data()
@@ -1159,7 +1159,7 @@ async def single_assign_to_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "create_group_in_flow")
 @handle_error
-async def create_group_in_flow(cb: CallbackQuery, state: FSMContext):
+async def create_group_in_flow(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling create_group_in_flow for user {cb.from_user.id}")
     text = (
         "📁 <b>Создать новую папку</b>\n\n"
@@ -1171,7 +1171,7 @@ async def create_group_in_flow(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.creating_group))
 @handle_error
-async def process_create_group(message: Message, state: FSMContext):
+async def process_create_group(message: types.Message, state: FSMContext):
     logger.info(f"Processing create group from user {message.from_user.id}")
     name = sanitize_input(message.text)
     if not name:
@@ -1218,7 +1218,7 @@ async def process_create_group(message: Message, state: FSMContext):
 
 @router.callback_query(F.data.startswith("confirm_delete:"))
 @handle_error
-async def confirm_delete_link(cb: CallbackQuery, state: FSMContext):
+async def confirm_delete_link(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling confirm_delete for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, idx = cb.data.split(':', 2)
@@ -1244,7 +1244,7 @@ async def confirm_delete_link(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("do_delete:"))
 @handle_error
-async def do_delete(cb: CallbackQuery, state: FSMContext):
+async def do_delete(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling do_delete for user {cb.from_user.id}, data={cb.data}")
     _, scope, idx = cb.data.split(':', 2)
     idx = int(idx)
@@ -1262,7 +1262,7 @@ async def do_delete(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("rename:"))
 @handle_error
-async def rename_link(cb: CallbackQuery, state: FSMContext):
+async def rename_link(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling rename for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, idx = cb.data.split(':', 2)
@@ -1283,7 +1283,7 @@ async def rename_link(cb: CallbackQuery, state: FSMContext):
 
 @router.message(StateFilter(LinkForm.rename_link))
 @handle_error
-async def process_rename_link(message: Message, state: FSMContext):
+async def process_rename_link(message: types.Message, state: FSMContext):
     logger.info(f"Processing rename link from user {message.from_user.id}")
     title = sanitize_input(message.text)
     if not title:
@@ -1307,7 +1307,7 @@ async def process_rename_link(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "create_group")
 @handle_error
-async def create_group(cb: CallbackQuery, state: FSMContext):
+async def create_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling create_group for user {cb.from_user.id}")
     await state.clear()
     text = (
@@ -1320,7 +1320,7 @@ async def create_group(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "show_groups")
 @handle_error
-async def show_groups(cb: CallbackQuery, state: FSMContext):
+async def show_groups(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling show_groups for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -1348,7 +1348,7 @@ async def show_groups(cb: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data.startswith("view_group:"))
 @handle_error
-async def view_group(cb: CallbackQuery, state: FSMContext):
+async def view_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling view_group for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     name = cb.data.split(':')[1]
@@ -1372,46 +1372,4 @@ async def view_group(cb: CallbackQuery, state: FSMContext):
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in items))
         buttons.extend(InlineKeyboardButton(text=f"🔗 {l['title']} ({stats[i]['views']})", callback_data=f'link_action:{name}:{i}') for i, l in enumerate(items))
     kb = make_kb(buttons, row_width=1, extra_buttons=[
-        InlineKeyboardButton(text='📊 Статистика папки', callback_data=f'show_stats:{name}'),
-        InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu'),
-        InlineKeyboardButton(text='⬅ Назад', callback_data='show_groups')
-    ])
-    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-    await cb.answer()
-
-@router.callback_query(F.data == "del_group")
-@handle_error
-async def del_group(cb: CallbackQuery, state: FSMContext):
-    logger.info(f"Handling del_group for user {cb.from_user.id}")
-    await state.clear()
-    uid = str(cb.from_user.id)
-    groups = db.execute('SELECT name FROM groups WHERE user_id = ?', (uid,))
-    root_groups = [{'name': g[0]} for g in groups]
-    if not root_groups:
-        text = (
-            "📁 <b>Нет папок</b>\n\n"
-            "Создайте новую папку через 'Создать папку'."
-        )
-        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
-        await cb.answer()
-        return
-    kb = make_kb([InlineKeyboardButton(text=f"🗑 {g['name']}", callback_data=f"confirm_delete_group:{g['name']}") for g in root_groups], row_width=1, extra_buttons=[
-        InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
-    ])
-    text = (
-        "📁 <b>Удалить папку</b>\n\n"
-        "Выберите папку для удаления:"
-    )
-    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-    await cb.answer()
-
-@router.callback_query(F.data.startswith("confirm_delete_group:"))
-@handle_error
-async def confirm_delete_group(cb: CallbackQuery, state: FSMContext):
-    logger.info(f"Handling confirm_delete_group for user {cb.from_user.id}, data={cb.data}")
-    await state.clear()
-    group_name = cb.data.split(':', 1)[1]
-    uid = str(cb.from_user.id)
-    groups = db.execute('SELECT name FROM groups WHERE user_id = ? AND name = ?', (uid, group_name))
-    if not groups:
-        text
+        InlineKeyboardButton(text='
