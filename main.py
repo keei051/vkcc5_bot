@@ -21,7 +21,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot and VK tokens
-BOT_TOKEN = "8141698569:AAH5bRGGVYGKRbv0eyZ9hX0BlsAMtJwad8E"
+BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"
 VK_TOKEN = "c26551e5c26551e5c26551e564c1513cc2cc265c26551e5aa37c66a6a6d8f7092ca2102"
 
 if not BOT_TOKEN or not VK_TOKEN:
@@ -129,7 +129,7 @@ async def shorten_link_vk(url: str) -> tuple[str | None, str]:
                         return data['response']['short_url'], ""
                     elif 'error' in data:
                         error_code = data['error'].get('error_code', 'Unknown')
-                        error_msg = data['error'].get('error_msg', 'Unknown error')
+                        error_msg = data['error'].get('error_msg', 'Unknown')
                         if error_code == 100:
                             return None, "Недействительный URL, проверьте ссылку."
                         elif error_code == 5:
@@ -182,7 +182,7 @@ async def get_link_stats(key: str, date_from: str = None, date_to: str = None) -
                         return result
                     elif "error" in data:
                         logger.error(f"VK API error: {data['error']}")
-                        return result
+                        return result  # Возвращаем пустой результат при ошибке
         except aiohttp.ClientError as e:
             logger.error(f"Attempt {attempt+1} failed for key {key}: {e}")
             if attempt == 2:
@@ -305,7 +305,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
     logger.info(f"Received /start from user {message.from_user.id}")
     await state.clear()
     welcome_text = (
-        "✨ <b>Добро пожаловать в @vkcc_bot!</b> ✨\n\n"
+        "✨ Добро пожаловать в @KaraLinka! ✨\n\n"
         "Я помогу вам:\n"
         "🔗 Сократить ссылки через VK\n"
         "📁 Организовать их в папки\n"
@@ -326,7 +326,7 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 async def main_menu_handler(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu for user {cb.from_user.id}")
     await state.clear()
-    text = "🏠 <b>Главное меню</b>\n\nВыберите действие:"
+    text = "🏠 Главное меню\n\nВыберите действие:"
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_main_menu())
     await cb.answer()
 
@@ -345,7 +345,7 @@ async def menu_links(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_links for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "🔗 <b>Управление ссылками</b>\n\n"
+        "🔗 Управление ссылками\n\n"
         "Вы можете:\n"
         "➕ Добавить новую ссылку\n"
         "➕ Загрузить несколько ссылок сразу\n"
@@ -361,7 +361,7 @@ async def menu_groups(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_groups for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "📁 <b>Управление папками</b>\n\n"
+        "📁 Управление папками\n\n"
         "Вы можете:\n"
         "➕ Создать новую папку\n"
         "📁 Просмотреть свои папки\n"
@@ -377,7 +377,7 @@ async def menu_stats(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling menu_stats for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "📊 <b>Статистика переходов</b>\n\n"
+        "📊 Статистика переходов\n\n"
         "Вы можете:\n"
         "🔗 Посмотреть статистику всех ссылок\n"
         "📅 Указать период для статистики\n"
@@ -398,7 +398,7 @@ async def confirm_clear(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🚫 Отмена', callback_data='menu')
     ])
     text = (
-        "⚠️ <b>Внимание!</b>\n\n"
+        "⚠️ Внимание!\n\n"
         "Вы собираетесь удалить все ссылки и папки. Это действие нельзя отменить.\n"
         "Продолжить?"
     )
@@ -426,7 +426,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
     uid = str(cb.from_user.id)
     scope = cb.data.split(':')[1]
     links = db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name IS NULL', (uid,)) if scope == 'root' else db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name = ?', (uid, scope))
-    text = f"📊 <b>Статистика {'всех ссылок' if scope == 'root' else 'папки ' + scope}</b>\n\n"
+    text = f"📊 Статистика {'всех ссылок' if scope == 'root' else 'папки ' + scope}\n\n"
     if not links:
         text += "👁 Нет данных для отображения."
         await loading_msg.delete()
@@ -461,7 +461,7 @@ async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling stats_by_date for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "📅 <b>Статистика за период</b>\n\n"
+        "📅 Статистика за период\n\n"
         "Введите даты в формате ГГГГ-ММ-ДД (например, 2025-06-01 2025-06-24):"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=cancel_kb)
@@ -498,7 +498,7 @@ async def process_stats_date(message: types.Message, state: FSMContext):
             all_cities[city_id] = all_cities.get(city_id, 0) + views
     
     city_names = await get_city_names(list(all_cities.keys()))
-    text = f"📊 <b>Статистика за {date_from} — {date_to}</b>\n\n"
+    text = f"📊 Статистика за {date_from} — {date_to}\n\n"
     text += '\n'.join(f"🔗 {l[0]}: {stats[i]['views']} переходов" for i, l in enumerate(links))
     text += f"\n\n👁 Всего переходов: {sum(s['views'] for s in stats)}"
     if all_cities:
@@ -521,7 +521,7 @@ async def select_link_stats(cb: types.CallbackQuery, state: FSMContext):
     links = db.execute('SELECT title, short FROM links WHERE user_id = ?', (uid,))
     if not links:
         text = (
-            "📋 <b>Нет ссылок</b>\n\n"
+            "📋 Нет ссылок\n\n"
             "Добавьте ссылки через меню 'Управление ссылками'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_stats_menu())
@@ -532,7 +532,7 @@ async def select_link_stats(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "🔗 <b>Выберите ссылку для статистики</b>\n\n"
+        "🔗 Выберите ссылку для статистики\n\n"
         "Нажмите на ссылку:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -553,7 +553,7 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     stats = await get_link_stats(link['short'].split('/')[-1])
     city_names = await get_city_names(list(stats['cities'].keys()))
     
-    text = f"📊 <b>Статистика для \"{link['title']}\"</b>\n\n"
+    text = f"📊 Статистика для \"{link['title']}\"\n\n"
     text += f"Сокращённая: {link['short']}\n"
     text += f"Оригинал: {link['original']}\n"
     text += f"👁 Всего переходов: {stats['views']}\n\n"
@@ -582,7 +582,7 @@ async def group_stats_select(cb: types.CallbackQuery, state: FSMContext):
     root_groups = [{'name': g[0]} for g in groups]
     if not root_groups:
         text = (
-            "📁 <b>Нет папок</b>\n\n"
+            "📁 Нет папок\n\n"
             "Создайте папку, чтобы посмотреть статистику."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_stats_menu())
@@ -592,7 +592,7 @@ async def group_stats_select(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "📊 <b>Выберите папку для статистики</b>\n\n"
+        "📊 Выберите папку для статистики\n\n"
         "Нажмите на папку:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -604,7 +604,7 @@ async def add_single(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling add_single for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "🔗 <b>Добавление одной ссылки</b>\n\n"
+        "🔗 Добавление одной ссылки\n\n"
         "Отправьте ссылку (например, https://example.com).\n"
         "Я сокращу её и предложу название.\n\n"
         "Для отмены нажмите кнопку ниже 👇"
@@ -620,7 +620,7 @@ async def process_link(message: types.Message, state: FSMContext):
     url = message.text.strip()
     if not is_valid_url(url):
         text = (
-            "❌ <b>Некорректный URL</b>\n\n"
+            "❌ Некорректный URL\n\n"
             "Введите ссылку, начинающуюся с http:// или https://, например:\n"
             "https://example.com\n\n"
             "Попробуйте снова или нажмите 'Отмена':"
@@ -632,7 +632,7 @@ async def process_link(message: types.Message, state: FSMContext):
     title = await fetch_page_title(url)
     await loading_msg.delete()
     if not short_url:
-        text = f"❌ <b>Не удалось сократить ссылку</b>\n\nПричина: {error_msg}\n\nПопробуйте другую ссылку:"
+        text = f"❌ Не удалось сократить ссылку\n\nПричина: {error_msg}\n\nПопробуйте другую ссылку:"
         await message.answer(text, parse_mode="HTML", reply_markup=cancel_kb)
         return
     await state.update_data(original=url, short=short_url, suggested_title=title)
@@ -643,7 +643,7 @@ async def process_link(message: types.Message, state: FSMContext):
     if title:
         buttons.insert(0, InlineKeyboardButton(text='✅ Использовать это название', callback_data='use_suggested_title'))
     text = (
-        f"🔗 <b>Ссылка успешно сокращена!</b>\n\n"
+        f"🔗 Ссылка успешно сокращена!\n\n"
         f"Оригинал: {url}\n"
         f"Сокращённая: {short_url}\n"
         f"Название: \"{title or 'Нет названия'}\"\n\n"
@@ -663,7 +663,7 @@ async def use_suggested_title(cb: types.CallbackQuery, state: FSMContext):
                (uid, title, data['short'], data['original'], datetime.datetime.now().isoformat()))
     stats_cache.pop(data['short'].split('/')[-1], None)
     text = (
-        f"✅ <b>Ссылка сохранена!</b>\n\n"
+        f"✅ Ссылка сохранена!\n\n"
         f"Название: {title}\n"
         f"Сокращённая: {data['short']}\n\n"
         "Что дальше?"
@@ -678,7 +678,7 @@ async def use_suggested_title(cb: types.CallbackQuery, state: FSMContext):
 async def enter_title(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling enter_title for user {cb.from_user.id}")
     text = (
-        "✏️ <b>Введите своё название</b>\n\n"
+        "✏️ Введите своё название\n\n"
         "Название для ссылки (до 100 символов):"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=cancel_kb)
@@ -692,7 +692,7 @@ async def process_title(message: types.Message, state: FSMContext):
     title = sanitize_input(message.text)
     if not title:
         text = (
-            "❌ <b>Некорректное название</b>\n\n"
+            "❌ Некорректное название\n\n"
             "Название должно быть от 1 до 100 символов.\n"
             "Попробуйте снова:"
         )
@@ -704,7 +704,7 @@ async def process_title(message: types.Message, state: FSMContext):
                (uid, title, data['short'], data['original'], datetime.datetime.now().isoformat()))
     stats_cache.pop(data['short'].split('/')[-1], None)
     text = (
-        f"✅ <b>Ссылка сохранена!</b>\n\n"
+        f"✅ Ссылка сохранена!\n\n"
         f"Название: {title}\n"
         f"Сокращённая: {data['short']}\n\n"
         "Что дальше?"
@@ -720,7 +720,7 @@ async def add_bulk(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling add_bulk for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "🔗 <b>Добавление нескольких ссылок</b>\n\n"
+        "🔗 Добавление нескольких ссылок\n\n"
         "Отправьте список ссылок, по одной на строку, например:\n"
         "https://example.com\n"
         "https://anotherexample.com\n\n"
@@ -738,7 +738,7 @@ async def process_bulk_links(message: types.Message, state: FSMContext):
     valid = [l for l in lines if is_valid_url(l)]
     if not valid:
         text = (
-            "❌ <b>Нет валидных ссылок</b>\n\n"
+            "❌ Нет валидных ссылок\n\n"
             "Убедитесь, что ссылки начинаются с http:// или https://.\n"
             "Попробуйте снова:"
         )
@@ -750,7 +750,7 @@ async def process_bulk_links(message: types.Message, state: FSMContext):
         InlineKeyboardButton(text='🔗 Использовать URL как названия', callback_data='bulk_use_url'),
         InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
     ])
-    text = f"✅ <b>Найдено {len(valid)} валидных ссылок</b>\n\nВыберите, как назвать ссылки:"
+    text = f"✅ Найдено {len(valid)} валидных ссылок\n\nВыберите, как назвать ссылки:"
     await message.answer(text, parse_mode="HTML", reply_markup=kb)
     await cleanup_chat(message)
 
@@ -773,10 +773,10 @@ async def bulk_use_url(cb: types.CallbackQuery, state: FSMContext):
         else:
             failed.append({'url': url, 'error': error_msg})
     await loading_msg.delete()
-    report = f"✅ <b>Обработано ссылок: {len(success)}</b>\n"
+    report = f"✅ Обработано ссылок: {len(success)}\n"
     report += '\n'.join(f"🔗 {e['title']} → {e['short']}" for e in success)
     if failed:
-        report += f"\n\n❌ <b>Ошибок: {len(failed)}</b>\n"
+        report += f"\n\n❌ Ошибок: {len(failed)}\n"
         report += '\n'.join(f"🔗 {e['url']}: {e['error']}" for e in failed)
     kb = make_kb([
         InlineKeyboardButton(text='📁 Добавить в папку', callback_data='bulk_to_group'),
@@ -795,7 +795,7 @@ async def bulk_enter_titles(cb: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     await state.update_data(bulk_index=0)
     text = (
-        f"✏️ <b>Название для ссылки 1/{len(data['bulk_links'])}</b>\n\n"
+        f"✏️ Название для ссылки 1/{len(data['bulk_links'])}\n\n"
         f"Ссылка: {data['bulk_links'][0]}\n"
         "Введите название (до 100 символов):"
     )
@@ -813,7 +813,7 @@ async def process_bulk_titles(message: types.Message, state: FSMContext):
     title = sanitize_input(message.text)
     if not title:
         text = (
-            "❌ <b>Некорректное название</b>\n\n"
+            "❌ Некорректное название\n\n"
             "Название должно быть от 1 до 100 символов.\n"
             f"Ссылка: {url}\n"
             "Попробуйте снова:"
@@ -835,16 +835,16 @@ async def process_bulk_titles(message: types.Message, state: FSMContext):
     if idx < len(data['bulk_links']):
         await state.update_data(bulk_index=idx)
         text = (
-            f"✏️ <b>Название для ссылки {idx+1}/{len(data['bulk_links'])}</b>\n\n"
+            f"✏️ Название для ссылки {idx+1}/{len(data['bulk_links'])}\n\n"
             f"Ссылка: {data['bulk_links'][idx]}\n"
             "Введите название (до 100 символов):"
         )
         await message.answer(text, parse_mode="HTML", reply_markup=cancel_kb)
     else:
-        report = f"✅ <b>Обработано ссылок: {len(data['success'])}</b>\n"
+        report = f"✅ Обработано ссылок: {len(data['success'])}\n"
         report += '\n'.join(f"🔗 {e['title']} → {e['short']}" for e in data['success'])
         if data.get('failed'):
-            report += f"\n\n❌ <b>Ошибок: {len(data['failed'])}</b>\n"
+            report += f"\n\n❌ Ошибок: {len(data['failed'])}\n"
             report += '\n'.join(f"🔗 {e['url']}: {e['error']}" for e in data['failed'])
         kb = make_kb([
             InlineKeyboardButton(text='📁 Добавить в папку', callback_data='bulk_to_group'),
@@ -865,7 +865,7 @@ async def bulk_to_group(cb: types.CallbackQuery, state: FSMContext):
     root_groups = [{'name': g[0]} for g in groups]
     if not root_groups:
         text = (
-            "❌ <b>Нет папок</b>\n\n"
+            "❌ Нет папок\n\n"
             "Создайте папку через меню 'Папки' → 'Создать папку'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
@@ -879,7 +879,7 @@ async def bulk_to_group(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "📁 <b>Выберите папку</b>\n\n"
+        "📁 Выберите папку\n\n"
         "Куда добавить сохранённые ссылки?"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -904,7 +904,7 @@ async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
     uid = str(cb.from_user.id)
     success = data.get('success', [])
     if not success:
-        text = "❌ <b>Нет ссылок для добавления</b>\n\nПопробуйте добавить ссылки заново."
+        text = "❌ Нет ссылок для добавления\n\nПопробуйте добавить ссылки заново."
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
         await state.clear()
         await cb.answer()
@@ -924,7 +924,7 @@ async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await cb.answer()
         return
-    text = f"✅ <b>{updated} ссылок добавлены в папку \"{group_name}\"</b>\n\n"
+    text = f"✅ {updated} ссылок добавлены в папку \"{group_name}\"\n\n"
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
     text += '\n'.join(f"🔗 {l[0]} → {l[1]}" for l in links) or '📚 Пусто.'
     kb = make_kb([
@@ -944,7 +944,7 @@ async def my_links(cb: types.CallbackQuery, state: FSMContext):
     links = db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name IS NULL', (uid,))
     if not links:
         text = (
-            "📋 <b>Нет ссылок</b>\n\n"
+            "📋 Нет ссылок\n\n"
             "Добавьте ссылки через меню 'Управление ссылками'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
@@ -958,7 +958,7 @@ async def my_links(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "🔗 <b>Ваши ссылки</b>\n\n"
+        "🔗 Ваши ссылки\n\n"
         "Нажмите на ссылку для действий или выберите ниже:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -986,7 +986,7 @@ async def link_action(cb: types.CallbackQuery, state: FSMContext):
     ])
     text = (
         f"{path}\n\n"
-        f"🔗 <b>{link['title']}</b>\n"
+        f"🔗 {link['title']}\n"
         f"Сокращённая: {link['short']}\n"
         f"Оригинал: {link['original']}\n\n"
         "Выберите действие:"
@@ -1007,7 +1007,7 @@ async def togroup(cb: types.CallbackQuery, state: FSMContext):
     groups = db.execute('SELECT name FROM groups WHERE user_id = ?', (uid,))
     if not groups:
         text = (
-            "❌ <b>Нет папок</b>\n\n"
+            "❌ Нет папок\n\n"
             "Создайте папку через меню 'Папки' → 'Создать папку'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
@@ -1021,7 +1021,7 @@ async def togroup(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
     ])
     text = (
-        "📁 <b>Выберите папку</b>\n\n"
+        "📁 Выберите папку\n\n"
         f"Куда переместить ссылку \"{link['title']}\"?"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -1036,7 +1036,7 @@ async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     link = data.get('togroup_link')
     if not link:
-        text = "❌ <b>Ссылка не найдена</b>\n\nПопробуйте снова."
+        text = "❌ Ссылка не найдена\n\nПопробуйте снова."
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
         await state.clear()
         await cb.answer()
@@ -1056,7 +1056,7 @@ async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await cb.answer()
         return
-    text = f"✅ <b>Ссылка перемещена в папку \"{group_name}\"</b>\n\n"
+    text = f"✅ Ссылка перемещена в папку \"{group_name}\"\n\n"
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
     text += '\n'.join(f"🔗 {l[0]} → {l[1]}" for l in links) or '📚 Пусто.'
     kb = make_kb([
@@ -1074,7 +1074,7 @@ async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
     uid = str(cb.from_user.id)
     data = await state.get_data()
     if not data.get('last_added_entry'):
-        text = "❌ <b>Ссылка не найдена</b>\n\nДобавьте ссылку заново."
+        text = "❌ Ссылка не найдена\n\nДобавьте ссылку заново."
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
         await state.clear()
         await cb.answer()
@@ -1083,7 +1083,7 @@ async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
     root_groups = [{'name': g[0]} for g in groups]
     if not root_groups:
         text = (
-            "❌ <b>Нет папок</b>\n\n"
+            "❌ Нет папок\n\n"
             "Создайте папку через меню 'Папки' → 'Создать папку'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
@@ -1097,7 +1097,7 @@ async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "📁 <b>Добавить ссылку в папку?</b>\n\n"
+        "📁 Добавить ссылку в папку?\n\n"
         "Выберите папку или пропустите:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -1120,7 +1120,7 @@ async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     entry = data.get('last_added_entry')
     if not entry:
-        text = "❌ <b>Ссылка не найдена</b>\n\nДобавьте ссылку заново."
+        text = "❌ Ссылка не найдена\n\nДобавьте ссылку заново."
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_links_menu())
         await state.clear()
         await cb.answer()
@@ -1140,7 +1140,7 @@ async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         await cb.answer()
         return
-    text = f"✅ <b>Ссылка добавлена в папку \"{group_name}\"</b>\n\n"
+    text = f"✅ Ссылка добавлена в папку \"{group_name}\"\n\n"
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
     text += '\n'.join(f"🔗 {l[0]} → {l[1]}" for l in links) or '📚 Пусто.'
     kb = make_kb([
@@ -1156,7 +1156,7 @@ async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
 async def create_group_in_flow(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling create_group_in_flow for user {cb.from_user.id}")
     text = (
-        "📁 <b>Создать новую папку</b>\n\n"
+        "📁 Создать новую папку\n\n"
         "Введите название папки (до 100 символов):"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=cancel_kb)
@@ -1170,7 +1170,7 @@ async def process_create_group(message: types.Message, state: FSMContext):
     name = sanitize_input(message.text)
     if not name:
         text = (
-            "❌ <b>Некорректное название</b>\n\n"
+            "❌ Некорректное название\n\n"
             "Название папки должно быть от 1 до 100 символов.\n"
             "Попробуйте снова:"
         )
@@ -1180,7 +1180,7 @@ async def process_create_group(message: types.Message, state: FSMContext):
     groups = db.execute('SELECT name FROM groups WHERE user_id = ?', (uid,))
     if any(g[0] == name for g in groups):
         text = (
-            "❌ <b>Папка уже существует</b>\n\n"
+            "❌ Папка уже существует\n\n"
             "Введите другое название:"
         )
         await message.answer(text, parse_mode="HTML", reply_markup=cancel_kb)
@@ -1197,14 +1197,14 @@ async def process_create_group(message: types.Message, state: FSMContext):
                 conn.commit()
                 if c.rowcount == 0:
                     raise ValueError("Ссылка не обновлена.")
-            text = f"✅ <b>Папка \"{name}\" создана, и ссылка добавлена.</b>\n\n"
+            text = f"✅ Папка \"{name}\" создана, и ссылка добавлена.\n\n"
             stats = await get_link_stats(entry['short'].split('/')[-1])
             text += f"🔗 {entry['title']}: {stats['views']} переходов"
         except Exception as e:
             logger.error(f"Error assigning link to new group: {e}")
-            text = f"✅ <b>Папка \"{name}\" создана.</b>\n\n❌ Не удалось добавить ссылку."
+            text = f"✅ Папка \"{name}\" создана.\n\n❌ Не удалось добавить ссылку."
     else:
-        text = f"✅ <b>Папка \"{name}\" создана.</b>"
+        text = f"✅ Папка \"{name}\" создана."
     
     await message.answer(text, parse_mode="HTML", reply_markup=get_groups_menu())
     await cleanup_chat(message)
@@ -1227,7 +1227,7 @@ async def confirm_delete_link(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🚫 Отмена', callback_data=back_data)
     ])
     text = (
-        f"⚠️ <b>Удалить ссылку?</b>\n\n"
+        f"⚠️ Удалить ссылку?\n\n"
         f"Название: {link['title']}\n"
         f"Сокращённая: {link['short']}\n\n"
         "Подтвердите действие:"
@@ -1266,7 +1266,7 @@ async def rename_link(cb: types.CallbackQuery, state: FSMContext):
     link = {'title': links[idx][0], 'short': links[idx][1]}
     await state.update_data(rename_link_short=link['short'], rename_scope=scope)
     text = (
-        f"✍ <b>Переименовать ссылку</b>\n\n"
+        f"✍ Переименовать ссылку\n\n"
         f"Текущее название: {link['title']}\n"
         f"Сокращённая: {link['short']}\n\n"
         "Введите новое название (до 100 символов):"
@@ -1282,7 +1282,7 @@ async def process_rename_link(message: types.Message, state: FSMContext):
     title = sanitize_input(message.text)
     if not title:
         text = (
-            "❌ <b>Некорректное название</b>\n\n"
+            "❌ Некорректное название\n\n"
             "Название должно быть от 1 до 100 символов.\n"
             "Попробуйте снова:"
         )
@@ -1305,7 +1305,7 @@ async def create_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling create_group for user {cb.from_user.id}")
     await state.clear()
     text = (
-        "📁 <b>Создать новую папку</b>\n\n"
+        "📁 Создать новую папку\n\n"
         "Введите название папки (до 100 символов):"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=cancel_kb)
@@ -1322,7 +1322,7 @@ async def show_groups(cb: types.CallbackQuery, state: FSMContext):
     root_groups = [{'name': g[0]} for g in groups]
     if not root_groups:
         text = (
-            "📁 <b>Нет папок</b>\n\n"
+            "📁 Нет папок\n\n"
             "Создайте новую папку через 'Создать папку'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
@@ -1334,7 +1334,7 @@ async def show_groups(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "📁 <b>Ваши папки</b>\n\n"
+        "📁 Ваши папки\n\n"
         "Нажмите на папку для просмотра содержимого:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
@@ -1350,13 +1350,13 @@ async def view_group(cb: types.CallbackQuery, state: FSMContext):
     groups = db.execute('SELECT name FROM groups WHERE user_id = ? AND name = ?', (uid, name))
     if not groups:
         text = (
-            "❌ <b>Папка не найдена</b>\n\n"
+            "❌ Папка не найдена\n\n"
             "Возможно, она была удалена."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
         await cb.answer()
         return
-    text = f"📁 <b>Папка \"{name}\"</b>\n\n"
+    text = f"📁 Папка \"{name}\"\n\n"
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, name))
     items = [{'title': l[0], 'short': l[1]} for l in links]
     buttons = []
@@ -1383,7 +1383,7 @@ async def del_group(cb: types.CallbackQuery, state: FSMContext):
     root_groups = [{'name': g[0]} for g in groups]
     if not root_groups:
         text = (
-            "📁 <b>Нет папок</b>\n\n"
+            "📁 Нет папок\n\n"
             "Создайте новую папку через 'Создать папку'."
         )
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
@@ -1393,28 +1393,40 @@ async def del_group(cb: types.CallbackQuery, state: FSMContext):
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
     ])
     text = (
-        "📁 <b>Удалить папку</b>\n\n"
+        "📁 Удалить папку\n\n"
         "Выберите папку для удаления:"
     )
-    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb
-    @router.callback_query(F.data.startswith("confirm_delete_group:"))
+    await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+    await cb.answer()
+
+@router.callback_query(F.data.startswith("confirm_delete_group:"))
 @handle_error
 async def confirm_delete_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling confirm_delete_group for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     group_name = cb.data.split(':', 1)[1]
+    uid = str(cb.from_user.id)
+    groups = db.execute('SELECT name FROM groups WHERE user_id = ? AND name = ?', (uid, group_name))
+    if not groups:
+        text = (
+            "❌ Папка не найдена\n\n"
+            "Возможно, она была удалена."
+        )
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
+        await cb.answer()
+        return
+    await state.update_data(group_to_delete=group_name)
     kb = make_kb([
         InlineKeyboardButton(text='✅ Удалить', callback_data=f'do_delete_group:{group_name}'),
-        InlineKeyboardButton(text='🚫 Отмена', callback_data='menu_groups')
+        InlineKeyboardButton(text='🚫 Отмена', callback_data='show_groups')
     ])
     text = (
         f"⚠️ Удалить папку \"{group_name}\"?\n\n"
-        f"Ссылки останутся, но без привязки к папке.\n\n"
-        f"Подтвердите удаление:"
+        "Все ссылки в папке будут перемещены в корень (без папки).\n"
+        "Подтвердите действие:"
     )
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await cb.answer()
-
 
 @router.callback_query(F.data.startswith("do_delete_group:"))
 @handle_error
@@ -1422,8 +1434,28 @@ async def do_delete_group(cb: types.CallbackQuery, state: FSMContext):
     logger.info(f"Handling do_delete_group for user {cb.from_user.id}, data={cb.data}")
     group_name = cb.data.split(':', 1)[1]
     uid = str(cb.from_user.id)
-    db.execute('UPDATE links SET group_name = NULL WHERE user_id = ? AND group_name = ?', (uid, group_name))
-    db.execute('DELETE FROM groups WHERE user_id = ? AND name = ?', (uid, group_name))
-    text = f"✅ Папка \"{group_name}\" удалена. Ссылки остались без папки."
+    try:
+        with sqlite3.connect(db.db_name) as conn:
+            c = conn.cursor()
+            c.execute('UPDATE links SET group_name = NULL WHERE user_id = ? AND group_name = ?', (uid, group_name))
+            c.execute('DELETE FROM groups WHERE user_id = ? AND name = ?', (uid, group_name))
+            conn.commit()
+    except sqlite3.Error as e:
+        logger.error(f"Error deleting group: {e}")
+        text = "❌ Ошибка при удалении папки."
+        await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
+        await state.clear()
+        await cb.answer()
+        return
+    text = f"✅ Папка \"{group_name}\" удалена. Ссылки перемещены в корень."
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_groups_menu())
+    await state.clear()
     await cb.answer()
+
+@router.callback_query(F.data == "select_links_for_group")
+@handle_error
+async def select_links_for_group(cb: types.CallbackQuery, state: FSMContext):
+    logger.info(f"Handling select_links_for_group for user {cb.from_user.id}")
+    await state.clear()
+    uid = str(cb.from_user.id)
+    links = db.execute
