@@ -426,22 +426,19 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
     uid = str(cb.from_user.id)
     scope = cb.data.split(':')[1]
     links = db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name IS NULL', (uid,)) if scope == 'root' else db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name = ?', (uid, scope))
-text = f"📊 <b>Статистика {'всех ссылок' if scope == 'root' else 'папки ' + scope}</b>\n\n"
+    text = f"📊 <b>Статистика {'всех ссылок' if scope == 'root' else 'папки ' + scope}</b>\n\n"
     if not links:
         text += "👁 Нет данных для отображения."
         await loading_msg.delete()
         await cb.message.edit_text(text, parse_mode="HTML", reply_markup=get_stats_menu())
         await cb.answer()
         return
-    
     link_list = [{'title': r[0], 'short': r[1], 'original': r[2]} for r in links]
     stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in link_list))
-    
     all_cities = {}
     for stat in stats:
         for city_id, views in stat['cities'].items():
             all_cities[city_id] = all_cities.get(city_id, 0) + views
-    
     city_names = await get_city_names(list(all_cities.keys()))
     text += '\n'.join(f"🔗 {l['title']} ({l['short']}): {stats[i]['views']} переходов" for i, l in enumerate(link_list))
     text += f"\n\n👁 Всего переходов: {sum(s['views'] for s in stats)}"
@@ -450,7 +447,6 @@ text = f"📊 <b>Статистика {'всех ссылок' if scope == 'root
         text += '\n'.join(f"- {city_names.get(cid, 'Неизвестный город')}: {views} переходов" for cid, views in all_cities.items())
     else:
         text += "\n\n🏙 Нет данных о городах."
-    
     kb = make_kb([
         InlineKeyboardButton(text='🔗 Статистика отдельной ссылки', callback_data='select_link_stats'),
         InlineKeyboardButton(text='🏠 Главное меню', callback_data='menu')
@@ -458,7 +454,6 @@ text = f"📊 <b>Статистика {'всех ссылок' if scope == 'root
     await loading_msg.delete()
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await cb.answer()
-
 @router.callback_query(F.data == "stats_by_date")
 @handle_error
 async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
