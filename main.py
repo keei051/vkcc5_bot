@@ -1,3 +1,11 @@
+import os
+from loguru import logger
+
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"
+VK_API_TOKEN = os.getenv("VK_API_TOKEN") or "c26551e5c26551e5c26551e564c1513cc2cc265c26551e5aa37c66a6a6d8f7092ca2102"
+
+logger.add("bot.log", rotation="1 MB")
+logger.info("🚀 Бот запускается")
 import asyncio
 import datetime
 import logging
@@ -33,7 +41,7 @@ class Database:
         try:
             self._init_db()
         except sqlite3.Error as e:
-            logger.error(f"DB init failed: {e}")
+            logger.error("DB init failed: {e}")
             raise
     def _init_db(self):
         with sqlite3.connect(self.db_name) as conn:
@@ -265,11 +273,11 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in link_list))
         all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
         city_names = await get_city_names(list(all_cities))
-        text += '\n'.join(f"🔗 {l['title']} ({l['short']}): {stats[i]['views']}" for i, l in enumerate(link_list))
-        text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
+        text += '" + "\n".join(f"🔗 {l['title']} ({l['short']}) + ": {stats[i]['views']}" for i, l in enumerate(link_list))
+        text += "\n👁 Всего: {sum(s['views'] for s in stats)}"
         if all_cities:
             city_lines = [f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items()]
-            text += "\n🏙 Города:\n" + '\n'.join(city_lines)
+            text += "\n🏙 Города:\n" + '" + "\n".join(city_lines) + "
         else:
             text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔗 Одна', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
@@ -280,7 +288,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "stats_by_date")
 @handle_error
 async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
-    logger.info(f"Handling stats_by_date for user {cb.from_user.id}")
+    logger.info("Handling stats_by_date for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("📅 Введите даты: ГГГГ-ММ-ДД ГГГГ-ММ-ДД (прим. 2025-06-01 2025-06-24)", parse_mode="HTML", reply_markup=cancel_kb)
     await state.set_state(LinkForm.waiting_for_stats_date)
@@ -319,12 +327,12 @@ async def process_stats_date(message: types.Message, state: FSMContext):
     city_names = await get_city_names(list(all_cities))
 
     text = f"📊 Статистика за {date_from}—{date_to}\n"
-    text += '\n'.join(f"🔗 {l[0]}: {stats[i]['views']}" for i, l in enumerate(links))
+    text += '" + "\n".join(f"🔗 {l[0]}: {stats[i]['views']}" for i, l in enumerate(links) + ")
     text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
 
     if all_cities:
         city_lines = [
-            f"- {city_names.get(cid, 'Неизв.')}: {views}"
+            "- {city_names.get(cid, 'Неизв.')}: {views}"
             for cid, views in all_cities.items()
         ]
         text += "\n🏙 Города:\n" + "\n".join(city_lines)
@@ -367,7 +375,11 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     stats = await get_link_stats(link['short'].split('/')[-1])
     city_names = await get_city_names(list(stats['cities'].keys()))
     text = f"📊 {link['title']}\n{link['short']}\n{link['original']}\n👁 {stats['views']}"
-    if stats['cities']: text += f"\n🏙 {'\n'.join(f'- {city_names.get(cid, 'Неизв.')}: {views}' for cid, views in stats['cities'].items())}"
+    city_lines = [
+        f"- {city_names.get(cid, 'Неизв.')}: {views}"
+        for cid, views in stats['cities'].items()
+    ]
+    text += "\n🏙 " + "\n".join(city_lines)
     else: text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔄 Обновить', callback_data=f'single_link_stats:{scope}:{idx}'), InlineKeyboardButton('⬅ Назад', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await loading_msg.delete()
@@ -493,9 +505,9 @@ async def bulk_use_url(cb: types.CallbackQuery, state: FSMContext):
         else: data['failed'].append({'url': url, 'error': error_msg})
     await loading_msg.delete()
     report = f"✅ Обработано: {len(data['bulk_links']) - len(data.get('failed', []))}"
-    if data.get('failed'): report += f"\n❌ {len(data['failed'])}\n{'\n'.join(f'🔗 {f['url']}: {f['error']}' for f in data['failed'])}"
+    if data.get('failed'): report += f"\n❌ {len(data['failed'])}\n{'" + "\n".join(f'🔗 {f['url']}: {f['error']}' for f in data['failed']) + "}"
     kb = make_kb([InlineKeyboardButton('📁 Папка', callback_data='bulk_to_group'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
-    await cb.message.edit_text(f"{report}\nЧто дальше?", parse_mode="HTML", reply_markup=kb)
+    await cb.message.edit_text("{report}\nЧто дальше?", parse_mode="HTML", reply_markup=kb)
     await state.update_data(failed=data.get('failed', []))
     await state.set_state(LinkForm.bulk_to_group)
     await cb.answer()
@@ -534,10 +546,10 @@ async def process_bulk_titles(message: types.Message, state: FSMContext):
         await state.update_data(bulk_index=idx)
         await message.answer(f"✏️ {idx+1}/{len(data['bulk_links'])}\n{data['bulk_links'][idx]}\nВведите:", parse_mode="HTML", reply_markup=cancel_kb)
     else:
-        report = f"✅ {len(data['success'])}\n{'\n'.join(f'🔗 {s['title']} → {s['short']}' for s in data['success'])}"
-        if data.get('failed'): report += f"\n❌ {len(data['failed'])}\n{'\n'.join(f'🔗 {f['url']}: {f['error']}' for f in data['failed'])}"
+        report = f"✅ {len(data['success'])}\n{'" + "\n".join(f'🔗 {s['title']} → {s['short']}' for s in data['success']) + "}"
+        if data.get('failed'): report += "\n❌ {len(data['failed'])}\n{'" + "\n".join(f'🔗 {f['url']}: {f['error']}' for f in data['failed']) + "}"
         kb = make_kb([InlineKeyboardButton('📁 Папка', callback_data='bulk_to_group'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
-        await message.answer(f"{report}\nЧто дальше?", parse_mode="HTML", reply_markup=kb)
+        await message.answer("{report}\nЧто дальше?", parse_mode="HTML", reply_markup=kb)
         await cleanup_chat(message, 2)
     await state.update_data(success=data.get('success', []), failed=data.get('failed', []))
 
@@ -579,7 +591,7 @@ async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
     updated = sum(db.execute('UPDATE links SET group_name = ? WHERE user_id = ? AND short = ?', (group_name, uid, entry['short'])) for entry in success)
     text = f"✅ {updated} в \"{group_name}\"\n"
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
-    text += '\n'.join(f"🔗 {l[0]} → {l[1]}" for l in links) or '📚 Пусто.'
+    text += '" + "\n".join(f"🔗 {l[0]} → {l[1]}" for l in links) + " or '📚 Пусто.'
     kb = make_kb([InlineKeyboardButton('📁 Папки', callback_data='menu_groups'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await state.clear()
@@ -588,7 +600,7 @@ async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "my_links")
 @handle_error
 async def my_links(cb: types.CallbackQuery, state: FSMContext):
-    logger.info(f"Handling my_links for user {cb.from_user.id}")
+    logger.info("Handling my_links for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
     links = db.execute('SELECT title, short, original FROM links WHERE user_id = ? AND group_name IS NULL', (uid,))
@@ -664,7 +676,7 @@ async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         return
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
-    text = f"✅ В \"{group_name}\"\n{'\n'.join(f'🔗 {l[0]} → {l[1]}' for l in links) or '📚 Пусто.'}"
+    text = f"✅ В \"{group_name}\"\n{'" + "\n".join(f'🔗 {l[0]} → {l[1]}' for l in links) + " or '📚 Пусто.'}"
     kb = make_kb([InlineKeyboardButton('📁 Папки', callback_data='menu_groups'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await state.clear()
@@ -673,7 +685,7 @@ async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "ask_to_group")
 @handle_error
 async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
-    logger.info(f"Handling ask_to_group for user {cb.from_user.id}")
+    logger.info("Handling ask_to_group for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     data = await state.get_data()
     if not data.get('last_added_entry'):
@@ -721,7 +733,7 @@ async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
         await state.clear()
         return
     links = db.execute('SELECT title, short FROM links WHERE user_id = ? AND group_name = ?', (uid, group_name))
-    text = f"✅ В \"{group_name}\"\n{'\n'.join(f'🔗 {l[0]} → {l[1]}' for l in links) or '📚 Пусто.'}"
+    text = f"✅ В \"{group_name}\"\n{'" + "\n".join(f'🔗 {l[0]} → {l[1]}' for l in links) + " or '📚 Пусто.'}"
     kb = make_kb([InlineKeyboardButton('📁 Папки', callback_data='menu_groups'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await state.clear()
@@ -947,3 +959,316 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# 👇 Новый хендлер: нажата кнопка "Одна ссылка"
+@router.callback_query(F.data == "add_single")
+@handle_error
+async def add_single_link(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("🔗 Введите ссылку для сокращения:", reply_markup=cancel_kb)
+    await state.set_state(LinkForm.waiting_for_link)
+
+# 👇 Пользователь вводит ссылку
+@router.message(StateFilter(LinkForm.waiting_for_link))
+@handle_error
+async def process_link_input(message: types.Message, state: FSMContext):
+    url = message.text.strip()
+    if not url.startswith("http"):
+        await message.answer("❌ Неверная ссылка. Введите корректную.", reply_markup=cancel_kb)
+        return
+    await state.update_data(link=url)
+    await message.answer("📝 Введите заголовок для ссылки:", reply_markup=cancel_kb)
+    await state.set_state(LinkForm.waiting_for_title)
+
+# 👇 Пользователь вводит заголовок
+@router.message(StateFilter(LinkForm.waiting_for_title))
+@handle_error
+async def process_link_title(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    url = data.get("link")
+    title = message.text.strip()
+    short_link = await shorten_link(url)
+    db.execute("INSERT INTO links (user_id, title, short, original) VALUES (?, ?, ?, ?)", (
+        str(message.from_user.id), title, short_link, url))
+    await message.answer(f"✅ Ссылка сохранена:
+<b>{title}</b>
+{short_link}", parse_mode="HTML", reply_markup=get_links_menu())
+    await state.clear()
+
+# 👇 Обработка массовых ссылок
+@router.message(StateFilter(LinkForm.bulk_links))
+@handle_error
+async def process_bulk_links(message: types.Message, state: FSMContext):
+    raw_links = message.text.strip().splitlines()
+    added = []
+    for line in raw_links:
+        if line.startswith("http"):
+            short = await shorten_link(line)
+            db.execute("INSERT INTO links (user_id, title, short, original) VALUES (?, ?, ?, ?)", (
+                str(message.from_user.id), line[:30] + "...", short, line))
+            added.append(short)
+    if not added:
+        await message.answer("❌ Не удалось сократить ни одной ссылки.", reply_markup=get_links_menu())
+    else:
+        await message.answer(f"✅ Сокращено ссылок: {len(added)}", reply_markup=get_links_menu())
+    await state.clear()
+
+
+# 👇 Нажата кнопка "Создать папку"
+@router.callback_query(F.data == "create_group")
+@handle_error
+async def create_group(callback: CallbackQuery, state: FSMContext):
+    await callback.message.edit_text("📁 Введите название новой папки:", reply_markup=cancel_kb)
+    await state.set_state(LinkForm.waiting_for_group_name)
+
+# 👇 Пользователь вводит название папки
+@router.message(StateFilter(LinkForm.waiting_for_group_name))
+@handle_error
+async def save_group_name(message: types.Message, state: FSMContext):
+    name = message.text.strip()
+    uid = str(message.from_user.id)
+    db.execute("INSERT INTO groups (user_id, name) VALUES (?, ?)", (uid, name))
+    await message.answer(f"✅ Папка «{name}» создана.", reply_markup=get_groups_menu())
+    await state.clear()
+
+# 👇 Просмотр папок
+@router.callback_query(F.data == "view_groups")
+@handle_error
+async def view_groups(callback: CallbackQuery):
+    uid = str(callback.from_user.id)
+    groups = db.execute("SELECT id, name FROM groups WHERE user_id = ?", (uid,))
+    if not groups:
+        await callback.message.edit_text("📂 У вас пока нет папок.", reply_markup=get_groups_menu())
+        return
+    text = "📂 Ваши папки:
+
+" + "\n".join(f"📁 {g[1]}" for g in groups)
+    await callback.message.edit_text(text, reply_markup=get_groups_menu())
+
+# 👇 Удаление папки — выбор
+@router.callback_query(F.data == "delete_group")
+@handle_error
+async def delete_group(callback: CallbackQuery, state: FSMContext):
+    uid = str(callback.from_user.id)
+    groups = db.execute("SELECT id, name FROM groups WHERE user_id = ?", (uid,))
+    if not groups:
+        await callback.message.edit_text("❌ У вас нет папок для удаления.", reply_markup=get_groups_menu())
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=g[1], callback_data=f"confirm_delete_group:{g[0]}")] for g in groups
+    ] + [[InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]])
+    await callback.message.edit_text("❓ Выберите папку для удаления:", reply_markup=kb)
+
+# 👇 Удаление папки — финальное
+@router.callback_query(F.data.startswith("confirm_delete_group:"))
+@handle_error
+async def do_delete_group(callback: CallbackQuery):
+    gid = int(callback.data.split(":")[1])
+    db.execute("DELETE FROM groups WHERE id = ?", (gid,))
+    await callback.message.edit_text("🗑 Папка удалена.", reply_markup=get_groups_menu())
+
+
+# 👇 Кнопка «📁 Переместить» возле ссылки
+@router.callback_query(F.data.startswith("move_link:"))
+@handle_error
+async def choose_group_to_move(callback: CallbackQuery, state: FSMContext):
+    link_id = int(callback.data.split(":")[1])
+    uid = str(callback.from_user.id)
+    groups = db.execute("SELECT id, name FROM groups WHERE user_id = ?", (uid,))
+    if not groups:
+        await callback.message.answer("❌ У вас нет папок. Сначала создайте.", reply_markup=get_links_menu())
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=g[1], callback_data=f"confirm_move:{link_id}:{g[0]}")] for g in groups
+    ] + [[InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]])
+    await callback.message.edit_text("📁 В какую папку переместить ссылку?", reply_markup=kb)
+
+# 👇 Подтверждение перемещения
+@router.callback_query(F.data.startswith("confirm_move:"))
+@handle_error
+async def move_link(callback: CallbackQuery):
+    _, link_id, group_id = callback.data.split(":")
+    db.execute("UPDATE links SET group_id = ? WHERE id = ?", (group_id, link_id))
+    await callback.message.edit_text("✅ Ссылка перемещена в выбранную папку.", reply_markup=get_links_menu())
+
+
+# 👇 Пользователь выбирает диапазон дат для статистики
+@router.message(StateFilter(LinkForm.waiting_for_stats_date))
+@handle_error
+async def process_stats_date(message: types.Message, state: FSMContext):
+    logger.info(f"Processing stats date from user {message.from_user.id}")
+    dates = message.text.strip().split()
+    if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
+        await message.answer("❌ Неверный формат. Введите даты в формате YYYY-MM-DD YYYY-MM-DD", reply_markup=cancel_kb)
+        return
+    date_from, date_to = dates
+    uid = str(message.from_user.id)
+    links = db.execute('SELECT id, title, short FROM links WHERE user_id = ?', (uid,))
+    if not links:
+        await message.answer("📋 У вас пока нет ссылок.", reply_markup=get_stats_menu())
+        await state.clear()
+        return
+    loading_msg = await message.answer("⏳ Загружаем статистику...")
+
+    stats = await asyncio.gather(*(get_link_stats(l[2].split("/")[-1], date_from, date_to) for l in links))
+    all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
+    city_names = await get_city_names(list(all_cities))
+
+    text = f"📊 Статистика за {date_from}—{date_to}\n\n"
+    for i, l in enumerate(links):
+        text += f"🔗 {l[1]} — {stats[i]['views']} просмотров\n"
+
+    total_views = sum(s['views'] for s in stats)
+    text += f"\n👁 Всего просмотров: {total_views}\n"
+
+    if all_cities:
+        city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
+        text += "\n🏙 Города:\n" + "\n".join(city_lines)
+    else:
+        text += "\n🏙 Нет данных по городам."
+
+    await loading_msg.delete()
+    await message.answer(text.strip(), parse_mode="HTML", reply_markup=get_stats_menu())
+    await cleanup_chat(message)
+    await state.clear()
+
+
+# 👇 Пользователь нажимает «📊 По ссылке» в меню
+@router.callback_query(F.data == "stats_by_link")
+@handle_error
+async def choose_link_for_stats(callback: CallbackQuery, state: FSMContext):
+    uid = str(callback.from_user.id)
+    links = db.execute("SELECT id, title FROM links WHERE user_id = ?", (uid,))
+    if not links:
+        await callback.message.edit_text("❌ У вас пока нет ссылок.", reply_markup=get_stats_menu())
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=l[1], callback_data=f"stats_link_dates:{l[0]}")] for l in links
+    ] + [[InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]])
+    await callback.message.edit_text("🔗 Выберите ссылку для просмотра статистики:", reply_markup=kb)
+
+# 👇 Запрашиваем даты
+@router.callback_query(F.data.startswith("stats_link_dates:"))
+@handle_error
+async def ask_dates_for_one_link(callback: CallbackQuery, state: FSMContext):
+    link_id = int(callback.data.split(":")[1])
+    await state.update_data(link_id=link_id)
+    await state.set_state(LinkForm.waiting_for_stats_date_one)
+    await callback.message.edit_text("📅 Введите диапазон дат в формате YYYY-MM-DD YYYY-MM-DD", reply_markup=cancel_kb)
+
+# 👇 Обработка введённых дат
+@router.message(StateFilter(LinkForm.waiting_for_stats_date_one))
+@handle_error
+async def process_dates_for_one_link(message: types.Message, state: FSMContext):
+    dates = message.text.strip().split()
+    if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
+        await message.answer("❌ Неверный формат. Введите две даты через пробел.", reply_markup=cancel_kb)
+        return
+    data = await state.get_data()
+    link_id = data.get("link_id")
+    link = db.execute("SELECT title, short FROM links WHERE id = ?", (link_id,))
+    if not link:
+        await message.answer("❌ Ссылка не найдена.", reply_markup=get_stats_menu())
+        await state.clear()
+        return
+    date_from, date_to = dates
+    short = link[0][1].split("/")[-1]
+    loading = await message.answer("⏳ Считаем...")
+    stats = await get_link_stats(short, date_from, date_to)
+    city_names = await get_city_names(list(stats["cities"].keys()))
+    text = f"📊 Статистика за {date_from}—{date_to}\n"
+    text += f"🔗 {link[0][0]} — {stats['views']} кликов"
+    if stats["cities"]:
+        city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in stats["cities"].items()]
+        text += "\n\n🏙 Города:\n" + "\n".join(city_lines)
+    else:
+        text += "\n\n🏙 Нет данных по городам."
+    await loading.delete()
+    await message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
+    await cleanup_chat(message)
+    await state.clear()
+
+
+from datetime import datetime, timedelta
+
+# 📁 Пользователь нажимает «📊 По папке»
+@router.callback_query(F.data == "stats_by_group")
+@handle_error
+async def choose_group_for_stats(callback: CallbackQuery, state: FSMContext):
+    uid = str(callback.from_user.id)
+    groups = db.execute("SELECT DISTINCT group_id FROM links WHERE user_id = ? AND group_id IS NOT NULL", (uid,))
+    if not groups:
+        await callback.message.edit_text("❌ У вас пока нет папок.", reply_markup=get_stats_menu())
+        return
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text=f"📂 {g[0]}", callback_data=f"group_stats:{g[0]}")] for g in groups
+    ] + [[InlineKeyboardButton(text="🏠 Меню", callback_data="menu")]])
+    await callback.message.edit_text("📁 Выберите папку:", reply_markup=kb)
+
+# ⏳ Запрашиваем даты для выбранной группы
+@router.callback_query(F.data.startswith("group_stats:"))
+@handle_error
+async def ask_dates_for_group(callback: CallbackQuery, state: FSMContext):
+    group_id = callback.data.split(":")[1]
+    await state.update_data(group_id=group_id)
+    await state.set_state(LinkForm.waiting_for_stats_date_group)
+    await callback.message.edit_text("📅 Введите даты в формате YYYY-MM-DD YYYY-MM-DD", reply_markup=cancel_kb)
+
+# 📊 Статистика по выбранной группе
+@router.message(StateFilter(LinkForm.waiting_for_stats_date_group))
+@handle_error
+async def process_group_stats(message: types.Message, state: FSMContext):
+    dates = message.text.strip().split()
+    if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
+        await message.answer("❌ Неверный формат. Введите две даты через пробел.", reply_markup=cancel_kb)
+        return
+    data = await state.get_data()
+    uid = str(message.from_user.id)
+    group_id = data.get("group_id")
+    links = db.execute("SELECT title, short FROM links WHERE user_id = ? AND group_id = ?", (uid, group_id))
+    if not links:
+        await message.answer("📂 В этой папке нет ссылок.", reply_markup=get_stats_menu())
+        await state.clear()
+        return
+    date_from, date_to = dates
+    loading = await message.answer("⏳ Загружаем...")
+    stats = await asyncio.gather(*(get_link_stats(l[1].split("/")[-1], date_from, date_to) for l in links))
+    all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
+    city_names = await get_city_names(list(all_cities))
+    text = f"📊 Папка: {group_id}\nЗа {date_from}—{date_to}\n"
+    text += "\n".join(f"🔗 {l[0]} — {stats[i]['views']} кликов" for i, l in enumerate(links))
+    text += f"\n\n👁 Всего: {sum(s['views'] for s in stats)}"
+    if all_cities:
+        city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
+        text += "\n\n🏙 Города:\n" + "\n".join(city_lines)
+    else:
+        text += "\n\n🏙 Нет данных по городам."
+    await loading.delete()
+    await message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
+    await cleanup_chat(message)
+    await state.clear()
+
+# 🗓 Быстрая статистика за 7 дней по всем ссылкам
+@router.callback_query(F.data == "quick_stats_7d")
+@handle_error
+async def quick_stats(callback: CallbackQuery, state: FSMContext):
+    uid = str(callback.from_user.id)
+    links = db.execute("SELECT title, short FROM links WHERE user_id = ?", (uid,))
+    if not links:
+        await callback.message.edit_text("❌ У вас нет ссылок.", reply_markup=get_stats_menu())
+        return
+    date_to = datetime.utcnow().date()
+    date_from = date_to - timedelta(days=7)
+    loading = await callback.message.answer("⏳ Считаем за последние 7 дней...")
+    stats = await asyncio.gather(*(get_link_stats(l[1].split("/")[-1], str(date_from), str(date_to)) for l in links))
+    all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
+    city_names = await get_city_names(list(all_cities))
+    text = f"📊 Статистика за {date_from}—{date_to}\n"
+    text += "\n".join(f"🔗 {l[0]} — {stats[i]['views']} кликов" for i, l in enumerate(links))
+    text += f"\n\n👁 Всего: {sum(s['views'] for s in stats)}"
+    if all_cities:
+        city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
+        text += "\n\n🏙 Города:\n" + "\n".join(city_lines)
+    else:
+        text += "\n\n🏙 Нет данных по городам."
+    await loading.delete()
+    await callback.message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
