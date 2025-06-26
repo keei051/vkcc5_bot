@@ -17,10 +17,10 @@ from loguru import logger
 
 # Настройка логирования
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
-logger.add("bot.log", rotation="1 MB")
+logger.add("bot.log", rotation="10 MB", retention="1 month")
 logger.info("🚀 Бот запускается")
 
-# Токены (вставлены по запросу пользователя)
+# Токены
 BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"
 VK_API_TOKEN = "c26551e5c26551e5c26551e564c1513cc2cc265c26551e5aa37c66a6a6d8f7092ca2102"
 
@@ -229,6 +229,7 @@ def make_kb(buttons, row_width=2, extra_buttons=None):
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
 def get_main_menu():
+    """Создание главного меню."""
     return make_kb([
         InlineKeyboardButton('🔗 Ссылки', callback_data='menu_links'),
         InlineKeyboardButton('📁 Папки', callback_data='menu_groups'),
@@ -237,6 +238,7 @@ def get_main_menu():
     ])
 
 def get_links_menu():
+    """Создание меню ссылок."""
     return make_kb([
         InlineKeyboardButton('➕ Одна', callback_data='add_single'),
         InlineKeyboardButton('➕ Несколько', callback_data='add_bulk'),
@@ -245,6 +247,7 @@ def get_links_menu():
     ], row_width=1)
 
 def get_groups_menu():
+    """Создание меню папок."""
     return make_kb([
         InlineKeyboardButton('➕ Создать', callback_data='create_group'),
         InlineKeyboardButton('📁 Показать', callback_data='show_groups'),
@@ -253,6 +256,7 @@ def get_groups_menu():
     ], row_width=1)
 
 def get_stats_menu():
+    """Создание меню статистики."""
     return make_kb([
         InlineKeyboardButton('🔗 Все', callback_data='show_stats:root'),
         InlineKeyboardButton('📅 Период', callback_data='stats_by_date'),
@@ -265,6 +269,7 @@ def get_stats_menu():
 cancel_kb = make_kb([InlineKeyboardButton('🚫 Отмена', callback_data='cancel')], row_width=1)
 
 def get_post_add_menu():
+    """Создание меню после добавления ссылки."""
     return make_kb([
         InlineKeyboardButton('➕ Ещё', callback_data='add_single'),
         InlineKeyboardButton('📋 Мои', callback_data='my_links'),
@@ -276,6 +281,7 @@ def get_post_add_menu():
 @router.message(Command("start"))
 @handle_error
 async def cmd_start(message: types.Message, state: FSMContext):
+    """Обработчик команды /start."""
     logger.info(f"Received /start from user {message.from_user.id}")
     await state.clear()
     await message.answer("✨ @KaraLinka! ✨\n🔗 Ссылки\n📁 Папки\n📊 Статистика\nВыберите:", parse_mode="HTML", reply_markup=get_main_menu())
@@ -283,6 +289,7 @@ async def cmd_start(message: types.Message, state: FSMContext):
 @router.message(Command("cancel"))
 @handle_error
 async def cmd_cancel(message: types.Message, state: FSMContext):
+    """Обработчик команды /cancel."""
     logger.info(f"Received /cancel from user {message.from_user.id}")
     await state.clear()
     await message.answer('✅ Отменено. Выберите:', reply_markup=get_main_menu())
@@ -290,6 +297,7 @@ async def cmd_cancel(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "menu")
 @handle_error
 async def main_menu_handler(cb: types.CallbackQuery, state: FSMContext):
+    """Обработчик возврата в главное меню."""
     logger.info(f"Handling menu for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("🏠 Меню\nВыберите:", parse_mode="HTML", reply_markup=get_main_menu())
@@ -298,6 +306,7 @@ async def main_menu_handler(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "cancel")
 @handle_error
 async def cancel_action(cb: types.CallbackQuery, state: FSMContext):
+    """Обработчик отмены действия."""
     logger.info(f"Handling cancel for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("✅ Отменено. Выберите:", parse_mode="HTML", reply_markup=get_main_menu())
@@ -306,6 +315,7 @@ async def cancel_action(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "menu_links")
 @handle_error
 async def menu_links(cb: types.CallbackQuery, state: FSMContext):
+    """Обработчик меню ссылок."""
     logger.info(f"Handling menu_links for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("🔗 Ссылки\n➕ Добавить\n➕ Несколько\n📋 Мои\nВыберите:", parse_mode="HTML", reply_markup=get_links_menu())
@@ -314,6 +324,7 @@ async def menu_links(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "menu_groups")
 @handle_error
 async def menu_groups(cb: types.CallbackQuery, state: FSMContext):
+    """Обработчик меню папок."""
     logger.info(f"Handling menu_groups for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("📁 Папки\n➕ Создать\n📁 Показать\n🗑 Удалить\nВыберите:", parse_mode="HTML", reply_markup=get_groups_menu())
@@ -322,6 +333,7 @@ async def menu_groups(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "menu_stats")
 @handle_error
 async def menu_stats(cb: types.CallbackQuery, state: FSMContext):
+    """Обработчик меню статистики."""
     logger.info(f"Handling menu_stats for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("📊 Статистика\n🔗 Все\n📅 Период\n🔗 Одна\n📁 По папкам\nВыберите:", parse_mode="HTML", reply_markup=get_stats_menu())
@@ -330,6 +342,7 @@ async def menu_stats(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "clear_all")
 @handle_error
 async def confirm_clear(cb: types.CallbackQuery, state: FSMContext):
+    """Подтверждение удаления всех данных."""
     logger.info(f"Handling clear_all for user {cb.from_user.id}")
     await state.clear()
     kb = make_kb([InlineKeyboardButton('✅ Да', callback_data='confirm_delete_all'), InlineKeyboardButton('🚫 Нет', callback_data='menu')])
@@ -339,6 +352,7 @@ async def confirm_clear(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "confirm_delete_all")
 @handle_error
 async def do_clear(cb: types.CallbackQuery, state: FSMContext):
+    """Выполнение удаления всех данных."""
     logger.info(f"Handling confirm_delete_all for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     db.execute('DELETE FROM links WHERE user_id = ?', (uid,))
@@ -350,6 +364,7 @@ async def do_clear(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("show_stats:"))
 @handle_error
 async def show_stats(cb: types.CallbackQuery, state: FSMContext):
+    """Отображение статистики по ссылкам."""
     logger.info(f"Handling show_stats for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     loading_msg = await bot.send_message(cb.message.chat.id, '⏳ Загружаем...')
@@ -379,6 +394,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "stats_by_date")
 @handle_error
 async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
+    """Запрос дат для статистики."""
     logger.info(f"Handling stats_by_date for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("📅 Введите даты: ГГГГ-ММ-ДД ГГГГ-ММ-ДД (прим. 2025-06-01 2025-06-24)", parse_mode="HTML", reply_markup=cancel_kb)
@@ -388,6 +404,7 @@ async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.waiting_for_stats_date))
 @handle_error
 async def process_stats_date(message: types.Message, state: FSMContext):
+    """Обработка введенных дат для статистики."""
     logger.info(f"Processing stats date from user {message.from_user.id}")
     dates = message.text.strip().split()
     if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
@@ -420,6 +437,7 @@ async def process_stats_date(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "select_link_stats")
 @handle_error
 async def select_link_stats(cb: types.CallbackQuery, state: FSMContext):
+    """Выбор ссылки для просмотра статистики."""
     logger.info(f"Handling select_link_stats for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -436,6 +454,7 @@ async def select_link_stats(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("single_link_stats:"))
 @handle_error
 async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
+    """Отображение статистики для одной ссылки."""
     logger.info(f"Handling single_link_stats for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     loading_msg = await bot.send_message(cb.message.chat.id, '⏳ Загружаем...')
@@ -470,6 +489,7 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "group_stats_select")
 @handle_error
 async def group_stats_select(cb: types.CallbackQuery, state: FSMContext):
+    """Выбор папки для просмотра статистики."""
     logger.info(f"Handling group_stats_select for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -485,6 +505,7 @@ async def group_stats_select(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "add_single")
 @handle_error
 async def add_single(cb: types.CallbackQuery, state: FSMContext):
+    """Добавление одной ссылки."""
     logger.info(f"Handling add_single for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("🔗 Введите ссылку (http://...)\nЯ сокращу.\nОтмена: 🚫", parse_mode="HTML", reply_markup=cancel_kb)
@@ -494,6 +515,7 @@ async def add_single(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.waiting_for_link))
 @handle_error
 async def process_link(message: types.Message, state: FSMContext):
+    """Обработка введенной ссылки."""
     logger.info(f"Processing link from user {message.from_user.id}")
     url = message.text.strip()
     if not is_valid_url(url):
@@ -516,6 +538,7 @@ async def process_link(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "use_suggested_title")
 @handle_error
 async def use_suggested_title(cb: types.CallbackQuery, state: FSMContext):
+    """Использование предложенного заголовка для ссылки."""
     logger.info(f"Handling use_suggested_title for user {cb.from_user.id}")
     data = await state.get_data()
     title = sanitize_input(data.get('suggested_title') or data['original'][:50])
@@ -531,6 +554,7 @@ async def use_suggested_title(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "enter_title")
 @handle_error
 async def enter_title(cb: types.CallbackQuery, state: FSMContext):
+    """Запрос ввода заголовка для ссылки."""
     logger.info(f"Handling enter_title for user {cb.from_user.id}")
     await cb.message.edit_text("✏️ Введите название (до 100):", parse_mode="HTML", reply_markup=cancel_kb)
     await state.set_state(LinkForm.waiting_for_title)
@@ -539,6 +563,7 @@ async def enter_title(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.waiting_for_title))
 @handle_error
 async def process_title(message: types.Message, state: FSMContext):
+    """Обработка введенного заголовка."""
     logger.info(f"Processing title from user {message.from_user.id}")
     title = sanitize_input(message.text)
     if not title:
@@ -557,6 +582,7 @@ async def process_title(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "add_bulk")
 @handle_error
 async def add_bulk(cb: types.CallbackQuery, state: FSMContext):
+    """Добавление нескольких ссылок."""
     logger.info(f"Handling add_bulk for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("🔗 Введите ссылки по строкам:\nhttp://...\nОтмена: 🚫", parse_mode="HTML", reply_markup=cancel_kb)
@@ -566,6 +592,7 @@ async def add_bulk(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.bulk_links))
 @handle_error
 async def process_bulk_links(message: types.Message, state: FSMContext):
+    """Обработка нескольких введенных ссылок."""
     logger.info(f"Processing bulk links from user {message.from_user.id}")
     valid = [l.strip() for l in message.text.splitlines() if l.strip() and is_valid_url(l)]
     if not valid:
@@ -583,6 +610,7 @@ async def process_bulk_links(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "bulk_use_url")
 @handle_error
 async def bulk_use_url(cb: types.CallbackQuery, state: FSMContext):
+    """Обработка массового добавления ссылок с использованием URL в качестве заголовка."""
     logger.info(f"Handling bulk_use_url for user {cb.from_user.id}")
     data = await state.get_data()
     uid = str(cb.from_user.id)
@@ -611,6 +639,7 @@ async def bulk_use_url(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "bulk_enter_titles")
 @handle_error
 async def bulk_enter_titles(cb: types.CallbackQuery, state: FSMContext):
+    """Запрос заголовков для массового добавления ссылок."""
     logger.info(f"Handling bulk_enter_titles for user {cb.from_user.id}")
     data = await state.get_data()
     await state.update_data(bulk_index=0)
@@ -621,6 +650,7 @@ async def bulk_enter_titles(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.bulk_titles))
 @handle_error
 async def process_bulk_titles(message: types.Message, state: FSMContext):
+    """Обработка заголовков для массового добавления ссылок."""
     logger.info(f"Processing bulk titles from user {message.from_user.id}")
     data = await state.get_data()
     idx = data['bulk_index']
@@ -659,6 +689,7 @@ async def process_bulk_titles(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "bulk_to_group")
 @handle_error
 async def bulk_to_group(cb: types.CallbackQuery, state: FSMContext):
+    """Выбор папки для массового перемещения ссылок."""
     logger.info(f"Handling bulk_to_group for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     groups = db.execute('SELECT id, name FROM groups WHERE user_id = ?', (uid,))
@@ -677,6 +708,7 @@ async def bulk_to_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "bulk_skip_group")
 @handle_error
 async def bulk_skip_group(cb: types.CallbackQuery, state: FSMContext):
+    """Пропуск перемещения ссылок в папку."""
     logger.info(f"Handling bulk_skip_group for user {cb.from_user.id}")
     await cb.message.edit_text("✅ Без папки.\nЧто дальше?", parse_mode="HTML", reply_markup=get_links_menu())
     await state.clear()
@@ -685,6 +717,7 @@ async def bulk_skip_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("bulk_assign:"))
 @handle_error
 async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
+    """Перемещение нескольких ссылок в папку."""
     logger.info(f"Handling bulk_assign for user {cb.from_user.id}, data={cb.data}")
     group_id = int(cb.data.split(':')[1])
     data = await state.get_data()
@@ -708,6 +741,7 @@ async def bulk_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "my_links")
 @handle_error
 async def my_links(cb: types.CallbackQuery, state: FSMContext):
+    """Отображение списка ссылок пользователя."""
     logger.info(f"Handling my_links for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -718,7 +752,7 @@ async def my_links(cb: types.CallbackQuery, state: FSMContext):
         return
     link_list = [{'id': r[0], 'title': r[1], 'short': r[2], 'original': r[3]} for r in links]
     stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in link_list))
-    buttons = [InlineKeyboardButton(f"🔗 {l['title']} ({stats[i]['views']})", callback_data=f'link_action:root:{l['id']}') for i, l in enumerate(link_list)]
+    buttons = [InlineKeyboardButton(f"🔗 {l['title']} ({stats[i].get('views', 0)})", callback_data=f"link_action:root:{l['id']}") for i, l in enumerate(link_list)]
     kb = make_kb(buttons, row_width=1, extra_buttons=[InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await cb.message.edit_text("🔗 Ссылки:\nВыберите:", parse_mode="HTML", reply_markup=kb)
     await cb.answer()
@@ -726,6 +760,7 @@ async def my_links(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("link_action:"))
 @handle_error
 async def link_action(cb: types.CallbackQuery, state: FSMContext):
+    """Действия с конкретной ссылкой."""
     logger.info(f"Handling link_action for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, link_id = cb.data.split(':')
@@ -754,6 +789,7 @@ async def link_action(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("togroup:"))
 @handle_error
 async def togroup(cb: types.CallbackQuery, state: FSMContext):
+    """Перемещение ссылки в папку."""
     logger.info(f"Handling togroup for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, link_id = cb.data.split(':')
@@ -782,6 +818,7 @@ async def togroup(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("assign:"))
 @handle_error
 async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
+    """Перемещение одной ссылки в папку."""
     logger.info(f"Handling assign for user {cb.from_user.id}, data={cb.data}")
     group_id = int(cb.data.split(':')[1])
     data = await state.get_data()
@@ -809,6 +846,7 @@ async def assign_to_group_single(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "ask_to_group")
 @handle_error
 async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
+    """Запрос на перемещение последней добавленной ссылки в папку."""
     logger.info(f"Handling ask_to_group for user {cb.from_user.id}")
     uid = str(cb.from_user.id)
     data = await state.get_data()
@@ -831,6 +869,7 @@ async def ask_to_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "skip_group")
 @handle_error
 async def skip_group(cb: types.CallbackQuery, state: FSMContext):
+    """Пропуск перемещения ссылки в папку."""
     logger.info(f"Handling skip_group for user {cb.from_user.id}")
     await cb.message.edit_text("✅ Без папки.\nЧто дальше?", parse_mode="HTML", reply_markup=get_links_menu())
     await state.clear()
@@ -839,6 +878,7 @@ async def skip_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("single_assign:"))
 @handle_error
 async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
+    """Перемещение одной ссылки в папку."""
     logger.info(f"Handling single_assign for user {cb.from_user.id}, data={cb.data}")
     group_id = int(cb.data.split(':')[1])
     data = await state.get_data()
@@ -866,6 +906,7 @@ async def single_assign_to_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "create_group_in_flow")
 @handle_error
 async def create_group_in_flow(cb: types.CallbackQuery, state: FSMContext):
+    """Создание новой папки в процессе добавления ссылки."""
     logger.info(f"Handling create_group_in_flow for user {cb.from_user.id}")
     await cb.message.edit_text("📁 Введите название (до 100):", parse_mode="HTML", reply_markup=cancel_kb)
     await state.set_state(LinkForm.creating_group)
@@ -874,6 +915,7 @@ async def create_group_in_flow(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.creating_group))
 @handle_error
 async def process_create_group(message: types.Message, state: FSMContext):
+    """Обработка создания новой папки."""
     logger.info(f"Processing create group from user {message.from_user.id}")
     name = sanitize_input(message.text)
     if not name:
@@ -899,6 +941,7 @@ async def process_create_group(message: types.Message, state: FSMContext):
 @router.callback_query(F.data.startswith("confirm_delete:"))
 @handle_error
 async def confirm_delete_link(cb: types.CallbackQuery, state: FSMContext):
+    """Подтверждение удаления ссылки."""
     logger.info(f"Handling confirm_delete for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, link_id = cb.data.split(':')
@@ -924,6 +967,7 @@ async def confirm_delete_link(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("do_delete:"))
 @handle_error
 async def do_delete(cb: types.CallbackQuery, state: FSMContext):
+    """Выполнение удаления ссылки."""
     logger.info(f"Handling do_delete for user {cb.from_user.id}, data={cb.data}")
     _, scope, link_id = cb.data.split(':')
     link_id = int(link_id)
@@ -940,6 +984,7 @@ async def do_delete(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("rename:"))
 @handle_error
 async def rename_link(cb: types.CallbackQuery, state: FSMContext):
+    """Переименование ссылки."""
     logger.info(f"Handling rename for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     _, scope, link_id = cb.data.split(':')
@@ -960,6 +1005,7 @@ async def rename_link(cb: types.CallbackQuery, state: FSMContext):
 @router.message(StateFilter(LinkForm.rename_link))
 @handle_error
 async def process_rename_link(message: types.Message, state: FSMContext):
+    """Обработка нового названия ссылки."""
     logger.info(f"Processing rename link from user {message.from_user.id}")
     title = sanitize_input(message.text)
     if not title:
@@ -978,6 +1024,7 @@ async def process_rename_link(message: types.Message, state: FSMContext):
 @router.callback_query(F.data == "create_group")
 @handle_error
 async def create_group(cb: types.CallbackQuery, state: FSMContext):
+    """Создание новой папки."""
     logger.info(f"Handling create_group for user {cb.from_user.id}")
     await state.clear()
     await cb.message.edit_text("📁 Введите название (до 100):", parse_mode="HTML", reply_markup=cancel_kb)
@@ -987,6 +1034,7 @@ async def create_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "show_groups")
 @handle_error
 async def show_groups(cb: types.CallbackQuery, state: FSMContext):
+    """Отображение списка папок."""
     logger.info(f"Handling show_groups for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -1003,6 +1051,7 @@ async def show_groups(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("view_group:"))
 @handle_error
 async def view_group(cb: types.CallbackQuery, state: FSMContext):
+    """Просмотр содержимого папки."""
     logger.info(f"Handling view_group for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     group_id = int(cb.data.split(':')[1])
@@ -1021,7 +1070,7 @@ async def view_group(cb: types.CallbackQuery, state: FSMContext):
         text += '📚 Пусто.'
     else:
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in items))
-        buttons.extend(InlineKeyboardButton(f"🔗 {l['title']} ({stats[i]['views']})", callback_data=f'link_action:{group_id}:{l['id']}') for i, l in enumerate(items))
+        buttons.extend(InlineKeyboardButton(f"🔗 {l['title']} ({stats[i].get('views', 0)})", callback_data=f'link_action:{group_id}:{l['id']}') for i, l in enumerate(items))
     kb = make_kb(buttons, row_width=1, extra_buttons=[
         InlineKeyboardButton('📊 Статистика', callback_data=f'show_stats:{group_id}'),
         InlineKeyboardButton('🏠 Меню', callback_data='menu'),
@@ -1033,6 +1082,7 @@ async def view_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "del_group")
 @handle_error
 async def del_group(cb: types.CallbackQuery, state: FSMContext):
+    """Выбор папки для удаления."""
     logger.info(f"Handling del_group for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -1049,6 +1099,7 @@ async def del_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("confirm_delete_group:"))
 @handle_error
 async def confirm_delete_group(cb: types.CallbackQuery, state: FSMContext):
+    """Подтверждение удаления папки."""
     logger.info(f"Handling confirm_delete_group for user {cb.from_user.id}, data={cb.data}")
     await state.clear()
     group_id = int(cb.data.split(':')[1])
@@ -1070,6 +1121,7 @@ async def confirm_delete_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data.startswith("do_delete_group:"))
 @handle_error
 async def do_delete_group(cb: types.CallbackQuery, state: FSMContext):
+    """Выполнение удаления папки."""
     logger.info(f"Handling do_delete_group for user {cb.from_user.id}, data={cb.data}")
     group_id = int(cb.data.split(':')[1])
     uid = str(cb.from_user.id)
@@ -1088,6 +1140,7 @@ async def do_delete_group(cb: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "quick_stats_7d")
 @handle_error
 async def quick_stats(cb: types.CallbackQuery, state: FSMContext):
+    """Быстрая статистика за последние 7 дней."""
     logger.info(f"Handling quick_stats_7d for user {cb.from_user.id}")
     await state.clear()
     uid = str(cb.from_user.id)
@@ -1103,8 +1156,8 @@ async def quick_stats(cb: types.CallbackQuery, state: FSMContext):
     all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
     city_names = await get_city_names(list(all_cities))
     text = f"📊 Статистика за {date_from}—{date_to}\n"
-    text += "\n".join(f"🔗 {l[1]} — {stats[i]['views']} кликов" for i, l in enumerate(links))
-    text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
+    text += "\n".join(f"🔗 {l[1]} — {stats[i].get('views', 0)} кликов" for i, l in enumerate(links))
+    text += f"\n👁 Всего: {sum(s.get('views', 0) for s in stats)}"
     if all_cities:
         city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
         text += "\n🏙 Города:\n" + "\n".join(city_lines)
@@ -1115,6 +1168,7 @@ async def quick_stats(cb: types.CallbackQuery, state: FSMContext):
     await cb.answer()
 
 async def main():
+    """Запуск бота."""
     logger.info("Starting bot...")
     try:
         await dp.start_polling()
