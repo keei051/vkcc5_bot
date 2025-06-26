@@ -367,7 +367,11 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     stats = await get_link_stats(link['short'].split('/')[-1])
     city_names = await get_city_names(list(stats['cities'].keys()))
     text = f"📊 {link['title']}\n{link['short']}\n{link['original']}\n👁 {stats['views']}"
-    if stats['cities']: text += f"\n🏙 {'\n'.join(f'- {city_names.get(cid, 'Неизв.')}: {views}' for cid, views in stats['cities'].items())}"
+    city_lines = [
+        f"- {city_names.get(cid, 'Неизв.')}: {views}"
+        for cid, views in stats['cities'].items()
+    ]
+    text += "\n🏙 " + "\n".join(city_lines)
     else: text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔄 Обновить', callback_data=f'single_link_stats:{scope}:{idx}'), InlineKeyboardButton('⬅ Назад', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await loading_msg.delete()
