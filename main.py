@@ -290,32 +290,52 @@ async def stats_by_date(cb: types.CallbackQuery, state: FSMContext):
 @handle_error
 async def process_stats_date(message: types.Message, state: FSMContext):
     logger.info(f"Processing stats date from user {message.from_user.id}")
+    
     dates = message.text.strip().split()
     if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
         await message.answer("❌ Неверный формат. Введите даты.", reply_markup=cancel_kb)
         return
+
     date_from, date_to = dates
     uid = str(message.from_user.id)
+
     links = db.execute('SELECT title, short FROM links WHERE user_id = ?', (uid,))
     if not links:
         await message.answer("📋 Нет ссылок.", reply_markup=get_stats_menu())
         await state.clear()
         return
+
     loading_msg = await message.answer('⏳ Загружаем...')
-    stats = await asyncio.gather(*(get_link_stats(l[1].split('/')[-1], date_from, date_to) for l in links))
-    all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
+
+    stats = await asyncio.gather(
+        *(get_link_stats(l[1].split('/')[-1], date_from, date_to) for l in links)
+    )
+
+    all_cities = {
+        cid: sum(s['cities'].get(cid, 0) for s in stats)
+        for cid in {c for s in stats for c in s['cities']}
+    }
+
     city_names = await get_city_names(list(all_cities))
+
     text = f"📊 Статистика за {date_from}—{date_to}\n"
     text += '\n'.join(f"🔗 {l[0]}: {stats[i]['views']}" for i, l in enumerate(links))
     text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
+
     if all_cities:
-    city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
-    text += "\n🏙 Города:\n" + "\n".join(city_lines)
-    else: text += "\n🏙 Нет данных."
+        city_lines = [
+            f"- {city_names.get(cid, 'Неизв.')}: {views}"
+            for cid, views in all_cities.items()
+        ]
+        text += "\n🏙 Города:\n" + "\n".join(city_lines)
+    else:
+        text += "\n🏙 Нет данных."
+
     await loading_msg.delete()
     await message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
     await cleanup_chat(message)
     await state.clear()
+
 
 @router.callback_query(F.data == "select_link_stats")
 @handle_error
