@@ -278,7 +278,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
         text += "\n👁 Всего: {sum(s['views'] for s in stats)}"
         if all_cities:
             city_lines = [f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items()]
-            text += "\n🏙 Города:\n" + '" + "\n".join(city_lines) + "
+            text += "\n🏙 Города:\n" + "\n".join(city_lines)
         else:
             text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔗 Одна', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
