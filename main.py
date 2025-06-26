@@ -260,7 +260,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
     text = f"📊 Статистика {'всех' if scope == 'root' else scope}\n"
     if not links:
         text += "👁 Нет данных."
-    # ❗ Некорректный else без if — пропущен
+    else:
         link_list = [{'title': r[0], 'short': r[1], 'original': r[2]} for r in links]
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in link_list))
         all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
@@ -270,7 +270,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
         if all_cities:
             city_lines = [f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items()]
             text += "\n🏙 Города:\n" + '\n'.join(city_lines)
-    # ❗ Некорректный else без if — пропущен
+        else:
             text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔗 Одна', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await loading_msg.delete()
@@ -328,7 +328,7 @@ async def process_stats_date(message: types.Message, state: FSMContext):
             for cid, views in all_cities.items()
         ]
         text += "\n🏙 Города:\n" + "\n".join(city_lines)
-    # ❗ Некорректный else без if — пропущен
+    else:
         text += "\n🏙 Нет данных."
 
     await loading_msg.delete()
@@ -367,11 +367,7 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     stats = await get_link_stats(link['short'].split('/')[-1])
     city_names = await get_city_names(list(stats['cities'].keys()))
     text = f"📊 {link['title']}\n{link['short']}\n{link['original']}\n👁 {stats['views']}"
-    city_lines = [
-        f"- {city_names.get(cid, 'Неизв.')}: {views}"
-        for cid, views in stats['cities'].items()
-    ]
-    text += "\n🏙 " + "\n".join(city_lines)
+    if stats['cities']: text += f"\n🏙 {'\n'.join(f'- {city_names.get(cid, 'Неизв.')}: {views}' for cid, views in stats['cities'].items())}"
     else: text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔄 Обновить', callback_data=f'single_link_stats:{scope}:{idx}'), InlineKeyboardButton('⬅ Назад', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
     await loading_msg.delete()
@@ -531,13 +527,13 @@ async def process_bulk_titles(message: types.Message, state: FSMContext):
     if short:
         db.execute('INSERT INTO links (user_id, title, short, original, created) VALUES (?, ?, ?, ?, ?)', (uid, title, short, url, datetime.datetime.now().isoformat()))
         data['success'].append({'title': title, 'short': short, 'original': url})
-    # ❗ Некорректный else без if — пропущен
+    else: data['failed'].append({'url': url, 'error': error_msg})
     await loading_msg.delete()
     idx += 1
     if idx < len(data['bulk_links']):
         await state.update_data(bulk_index=idx)
         await message.answer(f"✏️ {idx+1}/{len(data['bulk_links'])}\n{data['bulk_links'][idx]}\nВведите:", parse_mode="HTML", reply_markup=cancel_kb)
-    # ❗ Некорректный else без if — пропущен
+    else:
         report = f"✅ {len(data['success'])}\n{'\n'.join(f'🔗 {s['title']} → {s['short']}' for s in data['success'])}"
         if data.get('failed'): report += f"\n❌ {len(data['failed'])}\n{'\n'.join(f'🔗 {f['url']}: {f['error']}' for f in data['failed'])}"
         kb = make_kb([InlineKeyboardButton('📁 Папка', callback_data='bulk_to_group'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
