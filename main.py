@@ -16,7 +16,7 @@ import sqlite3
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"  # Проверьте токен!
+BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"
 VK_TOKEN = "c26551e5c26551e5c26551e564c1513cc2cc265c26551e5aa37c66a6a6d8f7092ca2102"
 
 if not BOT_TOKEN or not VK_TOKEN:
