@@ -273,7 +273,8 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
         stats = await asyncio.gather(*(get_link_stats(l['short'].split('/')[-1]) for l in link_list))
         all_cities = {cid: sum(s['cities'].get(cid, 0) for s in stats) for cid in {c for s in stats for c in s['cities']}}
         city_names = await get_city_names(list(all_cities))
-        text += '" + "\n".join(f"🔗 {l['title']} ({l['short']}) + ": {stats[i]['views']}" for i, l in enumerate(link_list))
+        for i, l in enumerate(link_list):
+    text += f"🔗 {l['title']} ({l['short']}): {stats[i]['views']}\n"
         text += "\n👁 Всего: {sum(s['views'] for s in stats)}"
         if all_cities:
             city_lines = [f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items()]
