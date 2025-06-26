@@ -375,17 +375,27 @@ async def single_link_stats(cb: types.CallbackQuery, state: FSMContext):
     link = {'title': links[idx][0], 'short': links[idx][1], 'original': links[idx][2]}
     stats = await get_link_stats(link['short'].split('/')[-1])
     city_names = await get_city_names(list(stats['cities'].keys()))
+    
     text = f"📊 {link['title']}\n{link['short']}\n{link['original']}\n👁 {stats['views']}"
-    city_lines = [
-        f"- {city_names.get(cid, 'Неизв.')}: {views}"
-        for cid, views in stats['cities'].items()
-    ]
-    text += "\n🏙 " + "\n".join(city_lines)
-    else: text += "\n🏙 Нет данных."
-    kb = make_kb([InlineKeyboardButton('🔄 Обновить', callback_data=f'single_link_stats:{scope}:{idx}'), InlineKeyboardButton('⬅ Назад', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
+    
+    if stats['cities']:
+        city_lines = [
+            f"- {city_names.get(cid, 'Неизв.')}: {views}"
+            for cid, views in stats['cities'].items()
+        ]
+        text += "\n🏙 " + "\n".join(city_lines)
+    else:
+        text += "\n🏙 Нет данных."
+    
+    kb = make_kb([
+        InlineKeyboardButton('🔄 Обновить', callback_data=f'single_link_stats:{scope}:{idx}'),
+        InlineKeyboardButton('⬅ Назад', callback_data='select_link_stats'),
+        InlineKeyboardButton('🏠 Меню', callback_data='menu')
+    ])
     await loading_msg.delete()
     await cb.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
     await cb.answer()
+
 
 @router.callback_query(F.data == "group_stats_select")
 @handle_error
