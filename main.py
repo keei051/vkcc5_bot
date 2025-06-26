@@ -16,7 +16,7 @@ import sqlite3
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"
+BOT_TOKEN = "7348002301:AAH2AY0N6oFUWjK5OBn7epUWeD-63ZlSb-k"  # Проверьте токен!
 VK_TOKEN = "c26551e5c26551e5c26551e564c1513cc2cc265c26551e5aa37c66a6a6d8f7092ca2102"
 
 if not BOT_TOKEN or not VK_TOKEN:
@@ -29,17 +29,18 @@ dp.include_router(router)
 stats_cache = {}
 
 class Database:
-    def __init__(self, db_name='links.db'): self._init_db()
-    def _init_db(self):
+    def __init__(self, db_name='links.db'):
         try:
-            with sqlite3.connect(self.db_name) as conn:
-                c = conn.cursor()
-                c.execute('CREATE TABLE IF NOT EXISTS links (user_id TEXT, title TEXT, short TEXT, original TEXT, group_name TEXT, created TEXT)')
-                c.execute('CREATE TABLE IF NOT EXISTS groups (user_id TEXT, name TEXT)')
-                conn.commit()
+            self._init_db()
         except sqlite3.Error as e:
             logger.error(f"DB init failed: {e}")
             raise
+    def _init_db(self):
+        with sqlite3.connect(self.db_name) as conn:
+            c = conn.cursor()
+            c.execute('CREATE TABLE IF NOT EXISTS links (user_id TEXT, title TEXT, short TEXT, original TEXT, group_name TEXT, created TEXT)')
+            c.execute('CREATE TABLE IF NOT EXISTS groups (user_id TEXT, name TEXT)')
+            conn.commit()
     def execute(self, query, params=()):
         try:
             with sqlite3.connect(self.db_name) as conn:
@@ -268,7 +269,7 @@ async def show_stats(cb: types.CallbackQuery, state: FSMContext):
         text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
         if all_cities:
             city_lines = [f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items()]
-            text += f"\n🏙 Города:\n{'\n'.join(city_lines)}"
+            text += "\n🏙 Города:\n" + '\n'.join(city_lines)
         else:
             text += "\n🏙 Нет данных."
     kb = make_kb([InlineKeyboardButton('🔗 Одна', callback_data='select_link_stats'), InlineKeyboardButton('🏠 Меню', callback_data='menu')])
@@ -307,7 +308,7 @@ async def process_stats_date(message: types.Message, state: FSMContext):
     text = f"📊 Статистика за {date_from}—{date_to}\n"
     text += '\n'.join(f"🔗 {l[0]}: {stats[i]['views']}" for i, l in enumerate(links))
     text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
-    if all_cities: text += f"\n🏙 Города:\n{'\n'.join(f'- {city_names.get(cid, "Неизв.")}: {views}' for cid, views in all_cities.items())}"
+    if all_cities: text += f"\n🏙 Города:\n{'\n'.join(f'- {city_names.get(cid, 'Неизв.'): {views}' for cid, views in all_cities.items())}"
     else: text += "\n🏙 Нет данных."
     await loading_msg.delete()
     await message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
