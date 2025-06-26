@@ -308,7 +308,9 @@ async def process_stats_date(message: types.Message, state: FSMContext):
     text = f"📊 Статистика за {date_from}—{date_to}\n"
     text += '\n'.join(f"🔗 {l[0]}: {stats[i]['views']}" for i, l in enumerate(links))
     text += f"\n👁 Всего: {sum(s['views'] for s in stats)}"
-    if all_cities: text += f"\n🏙 Города:\n{'\n'.join(f'- {city_names.get(cid, 'Неизв.'): {views}' for cid, views in all_cities.items())}"
+    if all_cities:
+    city_lines = [f"- {city_names.get(cid, 'Неизв.')}: {views}" for cid, views in all_cities.items()]
+    text += "\n🏙 Города:\n" + "\n".join(city_lines)
     else: text += "\n🏙 Нет данных."
     await loading_msg.delete()
     await message.answer(text, parse_mode="HTML", reply_markup=get_stats_menu())
