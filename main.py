@@ -25,18 +25,19 @@ if not BOT_TOKEN or not VK_TOKEN:
     logger.error("Токены не установлены")
     raise ValueError("BOT_TOKEN и VK_TOKEN должны быть установлены")
 
-# Инициализация бота
+# Инициализация
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
+dp.include_router(router)  # ✅ подключаем роутер сразу
 
-# Класс состояний
+# Состояния
 class LinkForm(StatesGroup):
     waiting_for_link = State()
     waiting_for_title = State()
     waiting_for_stats_date = State()
 
-# Класс для работы с JSON
+# JSON-хранилище
 class JsonStorage:
     def __init__(self, file_name='/data/links.json'):
         self.file_name = file_name
@@ -73,11 +74,11 @@ class JsonStorage:
 
 storage = JsonStorage()
 
-# Проверка валидности URL
+# Валидация URL
 def is_valid_url(url):
     return bool(re.match(r'^https?://[^\s/$.?#].[^\s]*$', url, re.IGNORECASE))
 
-# Функция сокращения ссылки через VK API
+# Сокращение ссылки через VK
 async def shorten_link_vk(url):
     if not is_valid_url(url):
         return None, "Недействительный URL"
@@ -98,23 +99,19 @@ async def shorten_link_vk(url):
         logger.error(f"Ошибка при сокращении ссылки: {e}")
         return None, f"Не удалось сократить: {str(e)[:50]}"
 
-# Функция получения статистики по ссылке
+# Получение статистики
 async def get_link_stats(key, date_from=None, date_to=None):
     params = {"access_token": VK_TOKEN, "key": key, "v": "5.199", "extended": 1, "interval": "day"}
     if date_from and date_to:
         params.update({"date_from": date_from, "date_to": date_to})
-    result = {"clicks": 0}  # Называем "clicks" для удобства, хотя это views
+    result = {"clicks": 0}
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(
-                "https://api.vk.com/method/utils.getLinkStats",
-                params=params,
-                timeout=10
-            ) as resp:
+            async with session.get("https://api.vk.com/method/utils.getLinkStats", params=params, timeout=10) as resp:
                 data = await resp.json()
                 if "response" in data and "stats" in data["response"]:
                     for period in data["response"]["stats"]:
-                        result["clicks"] += period.get("views", 0)  # Используем views как клики
+                        result["clicks"] += period.get("views", 0)
                     return result
                 logger.error(f"Ошибка VK API: {data.get('error', 'Нет данных')}")
                 return result
@@ -122,24 +119,22 @@ async def get_link_stats(key, date_from=None, date_to=None):
         logger.error(f"Ошибка получения статистики: {e}")
         return result
 
-# Создание клавиатуры
+# Кнопки
 def make_kb(buttons, row_width=2):
     keyboard = [buttons[i:i + row_width] for i in range(0, len(buttons), row_width)]
     return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-# Главное меню
 def get_main_menu():
     return make_kb([
         InlineKeyboardButton(text='🔗 Сократить ссылку', callback_data='add_link'),
         InlineKeyboardButton(text='📊 Статистика переходов', callback_data='stats'),
     ])
 
-# Клавиатура отмены
 cancel_kb = make_kb([
     InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
 ])
 
-# Декоратор обработки ошибок
+# Обработчик ошибок
 def handle_error(handler):
     async def wrapper(*args, **kwargs):
         try:
@@ -155,14 +150,13 @@ def handle_error(handler):
                 await args[0].answer(text, reply_markup=reply)
     return wrapper
 
-# Обработчики
+# Хендлеры
 @router.message(Command("start"))
 @handle_error
 async def cmd_start(message: types.Message, state: FSMContext):
-    logger.info(f"Получена команда /start от пользователя {message.from_user.id}")
     await state.clear()
     await message.answer(
-        "✨ Добро пожаловать! ✨\n🔗 Сокращайте ссылки\n📊 Смотрите статистику переходов\n\n⚠️ Примечание: Статистика показывает переходы, но VK API учитывает просмотры, что может включать не только клики.",
+        "✨ Добро пожаловать! ✨\n🔗 Сокращайте ссылки\n📊 Смотрите статистику переходов",
         reply_markup=get_main_menu()
     )
 
@@ -177,10 +171,7 @@ async def cancel_action(cb: types.CallbackQuery, state: FSMContext):
 @handle_error
 async def add_link(cb: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await cb.message.edit_text(
-        "🔗 Введите ссылку (http://... или https://...):",
-        reply_markup=cancel_kb
-    )
+    await cb.message.edit_text("🔗 Введите ссылку (http://... или https://...):", reply_markup=cancel_kb)
     await state.set_state(LinkForm.waiting_for_link)
     await cb.answer()
 
@@ -210,28 +201,20 @@ async def process_title(message: types.Message, state: FSMContext):
         return
     data = await state.get_data()
     uid = str(message.from_user.id)
-    link_data = {
+    storage.add_link(uid, {
         "title": title,
         "short": data['short'],
         "original": data['original'],
         "created": datetime.now().isoformat()
-    }
-    storage.add_link(uid, link_data)
-    await message.answer(
-        f"✅ Ссылка сохранена:\n<b>{title}</b>\n{data['short']}",
-        parse_mode="HTML",
-        reply_markup=get_main_menu()
-    )
+    })
+    await message.answer(f"✅ Ссылка сохранена:\n<b>{title}</b>\n{data['short']}", parse_mode="HTML", reply_markup=get_main_menu())
     await state.clear()
 
 @router.callback_query(lambda c: c.data == "stats")
 @handle_error
 async def stats_menu(cb: types.CallbackQuery, state: FSMContext):
     await state.clear()
-    await cb.message.edit_text(
-        "📅 Введите даты (ГГГГ-ММ-ДД ГГГГ-ММ-ДД, например, 2025-06-01 2025-06-30):",
-        reply_markup=cancel_kb
-    )
+    await cb.message.edit_text("📅 Введите даты (ГГГГ-ММ-ДД ГГГГ-ММ-ДД):", reply_markup=cancel_kb)
     await state.set_state(LinkForm.waiting_for_stats_date)
     await cb.answer()
 
@@ -240,18 +223,9 @@ async def stats_menu(cb: types.CallbackQuery, state: FSMContext):
 async def process_stats_date(message: types.Message, state: FSMContext):
     dates = message.text.strip().split()
     if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
-        await message.answer("❌ Неверный формат. Пример: 2025-06-01 2025-06-30", reply_markup=cancel_kb)
+        await message.answer("❌ Формат неверен. Пример: 2025-06-01 2025-06-30", reply_markup=cancel_kb)
         return
     date_from, date_to = dates
-    try:
-        datetime.strptime(date_from, "%Y-%m-%d")
-        datetime.strptime(date_to, "%Y-%m-%d")
-    except ValueError:
-        await message.answer("❌ Неверные даты. Используйте формат ГГГГ-ММ-ДД", reply_markup=cancel_kb)
-        return
-    if datetime.strptime(date_to, "%Y-%m-%d") < datetime.strptime(date_from, "%Y-%m-%d"):
-        await message.answer("❌ Конечная дата не может быть раньше начальной", reply_markup=cancel_kb)
-        return
     uid = str(message.from_user.id)
     links = storage.get_user_links(uid)
     if not links:
@@ -259,25 +233,22 @@ async def process_stats_date(message: types.Message, state: FSMContext):
         await state.clear()
         return
     loading_msg = await message.answer('⏳ Загружаем...')
-    stats = await asyncio.gather(
-        *(get_link_stats(link['short'].split('/')[-1], date_from, date_to) for link in links)
-    )
-    text = f"📊 Статистика переходов за {date_from}—{date_to}\n\n"
-    total_clicks = 0
+    stats = await asyncio.gather(*(get_link_stats(link['short'].split('/')[-1], date_from, date_to) for link in links))
+    text = f"📊 Статистика за {date_from}—{date_to}\n\n"
+    total = 0
     for i, link in enumerate(links):
         clicks = stats[i]['clicks']
-        total_clicks += clicks
+        total += clicks
         text += f"🔗 {link['title']}: {clicks} переходов\n"
-    text += f"\n👁 Всего: {total_clicks} переходов"
+    text += f"\n👁 Всего: {total} переходов"
     await loading_msg.delete()
     await message.answer(text, reply_markup=get_main_menu())
     await state.clear()
 
+# Запуск
 async def main():
-    logger.info("Запуск бота...")
     try:
-        await bot.delete_webhook(drop_pending_updates=True)  # Удаляем webhook
-        dp.include_router(router)  # Подключаем роутер только здесь
+        await bot.delete_webhook(drop_pending_updates=True)
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
