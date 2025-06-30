@@ -1,4 +1,2 @@
 aiogram==3.4.1
 aiohttp==3.9.5
-beautifulsoup4==4.13.4
-loguru==0.7.2
