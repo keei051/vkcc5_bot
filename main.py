@@ -1,6 +1,6 @@
 import os
 import asyncio
-import sqlite3
+import json
 import re
 from datetime import datetime
 from urllib.parse import quote
@@ -27,7 +27,7 @@ if not BOT_TOKEN or not VK_TOKEN:
 
 # Инициализация бота
 bot = Bot(BOT_TOKEN)
-dp = Dispatcher(bot, storage=MemoryStorage())
+dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
 
@@ -37,32 +37,41 @@ class LinkForm(StatesGroup):
     waiting_for_title = State()
     waiting_for_stats_date = State()
 
-# Класс для работы с базой данных
-class Database:
-    def __init__(self, db_name='links.db'):
-        self.db_name = db_name
-        self._init_db()
+# Класс для работы с JSON
+class JsonStorage:
+    def __init__(self, file_name='/data/links.json'):  # Путь для Railway Volume
+        self.file_name = file_name
+        self.data = self._load_data()
 
-    def _init_db(self):
-        with sqlite3.connect(self.db_name) as conn:
-            c = conn.cursor()
-            c.execute('''CREATE TABLE IF NOT EXISTS links (
-                user_id TEXT, title TEXT, short TEXT, original TEXT, created TEXT
-            )''')
-            conn.commit()
-
-    def execute(self, query, params=()):
+    def _load_data(self):
         try:
-            with sqlite3.connect(self.db_name) as conn:
-                c = conn.cursor()
-                c.execute(query, params)
-                conn.commit()
-                return c.fetchall() if query.upper().startswith('SELECT') else c.rowcount
-        except sqlite3.Error as e:
-            logger.error(f"Ошибка базы данных: {e}")
+            with open(self.file_name, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            return {}
+        except json.JSONDecodeError as e:
+            logger.error(f"Ошибка чтения JSON: {e}")
+            return {}
+
+    def _save_data(self):
+        try:
+            with open(self.file_name, 'w', encoding='utf-8') as f:
+                json.dump(self.data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.error(f"Ошибка записи JSON: {e}")
             raise
 
-db = Database()
+    def get_user_links(self, user_id):
+        return self.data.get(str(user_id), [])
+
+    def add_link(self, user_id, link_data):
+        user_id = str(user_id)
+        if user_id not in self.data:
+            self.data[user_id] = []
+        self.data[user_id].append(link_data)
+        self._save_data()
+
+storage = JsonStorage()
 
 # Проверка валидности URL
 def is_valid_url(url):
@@ -198,10 +207,13 @@ async def process_title(message: types.Message, state: FSMContext):
         return
     data = await state.get_data()
     uid = str(message.from_user.id)
-    db.execute(
-        'INSERT INTO links (user_id, title, short, original, created) VALUES (?, ?, ?, ?, ?)',
-        (uid, title, data['short'], data['original'], datetime.now().isoformat())
-    )
+    link_data = {
+        "title": title,
+        "short": data['short'],
+        "original": data['original'],
+        "created": datetime.now().isoformat()
+    }
+    storage.add_link(uid, link_data)
     await message.answer(
         f"✅ Ссылка сохранена:\n<b>{title}</b>\n{data['short']}",
         parse_mode="HTML",
@@ -238,21 +250,21 @@ async def process_stats_date(message: types.Message, state: FSMContext):
         await message.answer("❌ Конечная дата не может быть раньше начальной", reply_markup=cancel_kb)
         return
     uid = str(message.from_user.id)
-    links = db.execute('SELECT title, short FROM links WHERE user_id = ?', (uid,))
+    links = storage.get_user_links(uid)
     if not links:
         await message.answer("📋 У вас нет ссылок", reply_markup=get_main_menu())
         await state.clear()
         return
     loading_msg = await message.answer('⏳ Загружаем...')
     stats = await asyncio.gather(
-        *(get_link_stats(l[1].split('/')[-1], date_from, date_to) for l in links)
+        *(get_link_stats(link['short'].split('/')[-1], date_from, date_to) for link in links)
     )
     text = f"📊 Статистика переходов за {date_from}—{date_to}\n\n"
     total_clicks = 0
     for i, link in enumerate(links):
         clicks = stats[i]['clicks']
         total_clicks += clicks
-        text += f"🔗 {link[0]}: {clicks} переходов\n"
+        text += f"🔗 {link['title']}: {clicks} переходов\n"
     text += f"\n👁 Всего: {total_clicks} переходов"
     await loading_msg.delete()
     await message.answer(text, reply_markup=get_main_menu())
@@ -261,12 +273,12 @@ async def process_stats_date(message: types.Message, state: FSMContext):
 async def main():
     logger.info("Запуск бота...")
     try:
-        await dp.start_polling()
+        dp.include_router(router)  # Регистрация роутера
+        await dp.start_polling(bot)  # Передаём bot в polling
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
     finally:
-        await dp.storage.close()
-        await dp.storage.wait_closed()
+        await bot.session.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
