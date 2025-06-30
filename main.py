@@ -319,15 +319,27 @@ async def list_links(cb: types.CallbackQuery, state: FSMContext):
 async def main():
     logger.info("Запуск бота...")
     try:
-        # Дополнительная очистка webhook и getUpdates
-        await bot.delete_webhook(drop_pending_updates=True)
-        logger.info("Webhook удалён, начинаем polling")
+        # Повторные попытки удаления webhook для устранения конфликтов
+        for attempt in range(3):
+            try:
+                await bot.delete_webhook(drop_pending_updates=True)
+                logger.info(f"Webhook успешно удалён с попытки {attempt + 1}")
+                break
+            except Exception as e:
+                logger.warning(f"Ошибка удаления webhook с попытки {attempt + 1}: {e}")
+                if attempt < 2:
+                    await asyncio.sleep(2)  # Ждём перед повторной попыткой
+                else:
+                    logger.error("Не удалось удалить webhook после 3 попыток")
+                    raise
         dp.include_router(router)  # Подключаем роутер только здесь
-        await dp.start_polling(bot, polling_timeout=10)
+        logger.info("Начинаем polling")
+        await dp.start_polling(bot, polling_timeout=15, handle_as_tasks=False)
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
         raise
     finally:
+        logger.info("Закрытие сессии бота")
         await bot.session.close()
 
 if __name__ == "__main__":
