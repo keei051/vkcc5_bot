@@ -79,27 +79,210 @@ def is_valid_url(url):
 
 # Функция сокращения ссылки через VK API
 async def shorten_link_vk(url):
-    if not isმო�
+    if not is_valid_url(url):
+        return None, "Недействительный URL"
+    encoded_url = quote(url, safe='')
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"https://api.vk.com/method/utils.getShortLink?url={encoded_url}&v=5.199&access_token={VK_TOKEN}",
+                timeout=10
+            ) as resp:
+                data = await resp.json()
+                if 'response' in data and 'short_url' in data['response']:
+                    return data['response']['short_url'], ""
+                error_msg = data.get('error', {}).get('error_msg', 'Неизвестная ошибка')
+                logger.error(f"Ошибка VK API: {error_msg}")
+                return None, f"Ошибка: {error_msg}"
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка при сокращении ссылки: {e}")
+        return None, f"Не удалось сократить: {str(e)[:50]}"
 
-System: Я не могу увидеть полный код, так как вы отправили только фрагмент. Пожалуйста, предоставьте полный код, чтобы я мог точно определить проблему и предложить исправление. 
+# Функция получения статистики по ссылке
+async def get_link_stats(key, date_from=None, date_to=None):
+    params = {"access_token": VK_TOKEN, "key": key, "v": "5.199", "extended": 1, "interval": "day"}
+    if date_from and date_to:
+        params.update({"date_from": date_from, "date_to": date_to})
+    result = {"clicks": 0}  # Называем "clicks" для удобства, хотя это views
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.vk.com/method/utils.getLinkStats",
+                params=params,
+                timeout=10
+            ) as resp:
+                data = await resp.json()
+                if "response" in data and "stats" in data["response"]:
+                    for period in data["response"]["stats"]:
+                        result["clicks"] += period.get("views", 0)  # Используем views как клики
+                    return result
+                logger.error(f"Ошибка VK API: {data.get('error', 'Нет данных')}")
+                return result
+    except aiohttp.ClientError as e:
+        logger.error(f"Ошибка получения статистики: {e}")
+        return result
 
-Из предоставленных логов и описания ошибки ясно, что проблема связана с двойным подключением роутера, и я уже исправил это, убрав `dp.include_router(router)` из глобальной области. Однако, чтобы убедиться, что больше нет скрытых ошибок, полный код был бы полезен.
+# Создание клавиатуры
+def make_kb(buttons, row_width=2):
+    keyboard = [buttons[i:i + row_width] for i in range(0, len(buttons), row_width)]
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
 
-Также вы упомянули, что хотите, чтобы данные в `links.json` добавлялись динамически пользователями, а не были жёстко закодированы. Код, который я предоставил выше, уже настроен для этого: он создаёт пустой `links.json` (если его нет) и добавляет ссылки с `user_id` текущего пользователя при использовании команды сокращения ссылок. Если у вас есть конкретный код, который вы используете, поделитесь им, чтобы я мог проверить, нет ли других проблем.
+# Главное меню
+def get_main_menu():
+    return make_kb([
+        InlineKeyboardButton(text='🔗 Сократить ссылку', callback_data='add_link'),
+        InlineKeyboardButton(text='📊 Статистика переходов', callback_data='stats'),
+    ])
 
-### **Исправления и подтверждения**
+# Клавиатура отмены
+cancel_kb = make_kb([
+    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
+])
 
-1. **Исправленная ошибка роутера**:
-   - Удалено `dp.include_router(router)` из глобальной области.
-   - Оставлено только в `main()`:
-     ```python
-     async def main():
-         logger.info("Запуск бота...")
-         try:
-             await bot.delete_webhook(drop_pending_updates=True)
-             dp.include_router(router)  # Подключение роутера только здесь
-             await dp.start_polling(bot)
-         except Exception as e:
-             logger.error(f"Ошибка бота: {e}")
-         finally:
-             await bot.session.close()
+# Декоратор обработки ошибок
+def handle_error(handler):
+    async def wrapper(*args, **kwargs):
+        try:
+            return await handler(*args, **kwargs)
+        except Exception as e:
+            logger.error(f"Ошибка в {handler.__name__}: {e}")
+            text = f"❌ Ошибка: {str(e)[:50]}"
+            reply = get_main_menu()
+            if isinstance(args[0], types.CallbackQuery):
+                await args[0].message.edit_text(text, reply_markup=reply)
+                await args[0].answer()
+            elif isinstance(args[0], types.Message):
+                await args[0].answer(text, reply_markup=reply)
+    return wrapper
+
+# Обработчики
+@router.message(Command("start"))
+@handle_error
+async def cmd_start(message: types.Message, state: FSMContext):
+    logger.info(f"Получена команда /start от пользователя {message.from_user.id}")
+    await state.clear()
+    await message.answer(
+        "✨ Добро пожаловать! ✨\n🔗 Сокращайте ссылки\n📊 Смотрите статистику переходов\n\n⚠️ Примечание: Статистика показывает переходы, но VK API учитывает просмотры, что может включать не только клики.",
+        reply_markup=get_main_menu()
+    )
+
+@router.callback_query(lambda c: c.data == "cancel")
+@handle_error
+async def cancel_action(cb: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.message.edit_text("✅ Отменено", reply_markup=get_main_menu())
+    await cb.answer()
+
+@router.callback_query(lambda c: c.data == "add_link")
+@handle_error
+async def add_link(cb: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.message.edit_text(
+        "🔗 Введите ссылку (http://... или https://...):",
+        reply_markup=cancel_kb
+    )
+    await state.set_state(LinkForm.waiting_for_link)
+    await cb.answer()
+
+@router.message(StateFilter(LinkForm.waiting_for_link))
+@handle_error
+async def process_link(message: types.Message, state: FSMContext):
+    url = message.text.strip()
+    if not is_valid_url(url):
+        await message.answer("❌ Неверный URL. Попробуйте снова (пример: https://example.com):", reply_markup=cancel_kb)
+        return
+    loading_msg = await message.answer('⏳ Сокращаю...')
+    short_url, error_msg = await shorten_link_vk(url)
+    await loading_msg.delete()
+    if not short_url:
+        await message.answer(f"❌ Ошибка: {error_msg}", reply_markup=cancel_kb)
+        return
+    await state.update_data(original=url, short=short_url)
+    await message.answer("📝 Введите название для ссылки (до 100 символов):", reply_markup=cancel_kb)
+    await state.set_state(LinkForm.waiting_for_title)
+
+@router.message(StateFilter(LinkForm.waiting_for_title))
+@handle_error
+async def process_title(message: types.Message, state: FSMContext):
+    title = message.text.strip()[:100]
+    if not title:
+        await message.answer("❌ Название не может быть пустым:", reply_markup=cancel_kb)
+        return
+    data = await state.get_data()
+    uid = str(message.from_user.id)
+    link_data = {
+        "title": title,
+        "short": data['short'],
+        "original": data['original'],
+        "created": datetime.now().isoformat()
+    }
+    storage.add_link(uid, link_data)
+    await message.answer(
+        f"✅ Ссылка сохранена:\n<b>{title}</b>\n{data['short']}",
+        parse_mode="HTML",
+        reply_markup=get_main_menu()
+    )
+    await state.clear()
+
+@router.callback_query(lambda c: c.data == "stats")
+@handle_error
+async def stats_menu(cb: types.CallbackQuery, state: FSMContext):
+    await state.clear()
+    await cb.message.edit_text(
+        "📅 Введите даты (ГГГГ-ММ-ДД ГГГГ-ММ-ДД, например, 2025-06-01 2025-06-30):",
+        reply_markup=cancel_kb
+    )
+    await state.set_state(LinkForm.waiting_for_stats_date)
+    await cb.answer()
+
+@router.message(StateFilter(LinkForm.waiting_for_stats_date))
+@handle_error
+async def process_stats_date(message: types.Message, state: FSMContext):
+    dates = message.text.strip().split()
+    if len(dates) != 2 or not all(re.match(r"\d{4}-\d{2}-\d{2}", d) for d in dates):
+        await message.answer("❌ Неверный формат. Пример: 2025-06-01 2025-06-30", reply_markup=cancel_kb)
+        return
+    date_from, date_to = dates
+    try:
+        datetime.strptime(date_from, "%Y-%m-%d")
+        datetime.strptime(date_to, "%Y-%m-%d")
+    except ValueError:
+        await message.answer("❌ Неверные даты. Используйте формат ГГГГ-ММ-ДД", reply_markup=cancel_kb)
+        return
+    if datetime.strptime(date_to, "%Y-%m-%d") < datetime.strptime(date_from, "%Y-%m-%d"):
+        await message.answer("❌ Конечная дата не может быть раньше начальной", reply_markup=cancel_kb)
+        return
+    uid = str(message.from_user.id)
+    links = storage.get_user_links(uid)
+    if not links:
+        await message.answer("📋 У вас нет ссылок", reply_markup=get_main_menu())
+        await state.clear()
+        return
+    loading_msg = await message.answer('⏳ Загружаем...')
+    stats = await asyncio.gather(
+        *(get_link_stats(link['short'].split('/')[-1], date_from, date_to) for link in links)
+    )
+    text = f"📊 Статистика переходов за {date_from}—{date_to}\n\n"
+    total_clicks = 0
+    for i, link in enumerate(links):
+        clicks = stats[i]['clicks']
+        total_clicks += clicks
+        text += f"🔗 {link['title']}: {clicks} переходов\n"
+    text += f"\n👁 Всего: {total_clicks} переходов"
+    await loading_msg.delete()
+    await message.answer(text, reply_markup=get_main_menu())
+    await state.clear()
+
+async def main():
+    logger.info("Запуск бота...")
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)  # Удаляем webhook
+        dp.include_router(router)  # Подключаем роутер только здесь
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.error(f"Ошибка бота: {e}")
+    finally:
+        await bot.session.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())
