@@ -27,7 +27,7 @@ if not BOT_TOKEN or not VK_TOKEN:
 
 # Инициализация бота
 bot = Bot(BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())  # Исправлено: убрали bot из конструктора
+dp = Dispatcher(storage=MemoryStorage())
 router = Router()
 dp.include_router(router)
 
@@ -275,8 +275,9 @@ async def process_stats_date(message: types.Message, state: FSMContext):
 async def main():
     logger.info("Запуск бота...")
     try:
-        dp.include_router(router)  # Регистрация роутера
-        await dp.start_polling(bot)  # Передаём bot в polling
+        await bot.delete_webhook(drop_pending_updates=True)  # Удаляем webhook
+        dp.include_router(router)
+        await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
     finally:
