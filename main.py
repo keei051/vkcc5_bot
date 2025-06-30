@@ -18,7 +18,7 @@ logger.add("bot.log", rotation="1 MB")
 logger.info("🚀 Бот запускается")
 
 # Получение токенов
-BOT_TOKEN = os.getenv("BOT_TOKEN") or "7595580821:AAEMrqkEjVjwWUNPezu_lSoEnkkvRz_58BE"
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "7963207722:AAEsgpaJepsiu2yPiy-2UhbgxtjVIBYXhGo"
 VK_TOKEN = os.getenv("VK_API_TOKEN") or "b4a1b020b4a1b020b4a1b020b5b794c059bb4a1b4a1b020dcc370dd89310543ea6e73ed"
 
 if not BOT_TOKEN or not VK_TOKEN:
@@ -320,21 +320,21 @@ async def main():
     logger.info("Запуск бота...")
     try:
         # Повторные попытки удаления webhook для устранения конфликтов
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 await bot.delete_webhook(drop_pending_updates=True)
                 logger.info(f"Webhook успешно удалён с попытки {attempt + 1}")
                 break
             except Exception as e:
                 logger.warning(f"Ошибка удаления webhook с попытки {attempt + 1}: {e}")
-                if attempt < 2:
-                    await asyncio.sleep(2)  # Ждём перед повторной попыткой
+                if attempt < 4:
+                    await asyncio.sleep(3)
                 else:
-                    logger.error("Не удалось удалить webhook после 3 попыток")
+                    logger.error("Не удалось удалить webhook после 5 попыток")
                     raise
         dp.include_router(router)  # Подключаем роутер только здесь
         logger.info("Начинаем polling")
-        await dp.start_polling(bot, polling_timeout=15, handle_as_tasks=False)
+        await dp.start_polling(bot, polling_timeout=20, handle_as_tasks=False)
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
         raise
