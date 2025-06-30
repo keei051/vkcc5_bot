@@ -18,7 +18,7 @@ logger.add("bot.log", rotation="1 MB")
 logger.info("🚀 Бот запускается")
 
 # Получение токенов
-BOT_TOKEN = os.getenv("BOT_TOKEN") or "7595580821:AAEMrqkEjVjwWUNPezu_lSoEnkkvRz_58BE"  # Новый токен
+BOT_TOKEN = os.getenv("BOT_TOKEN") or "7595580821:AAEMrqkEjVjwWUNPezu_lSoEnkkvRz_58BE"
 VK_TOKEN = os.getenv("VK_API_TOKEN") or "b4a1b020b4a1b020b4a1b020b5b794c059bb4a1b4a1b020dcc370dd89310543ea6e73ed"
 
 if not BOT_TOKEN or not VK_TOKEN:
@@ -208,7 +208,7 @@ async def add_link(cb: types.CallbackQuery, state: FSMContext):
         "🔗 Введите ссылку (http://... или https://...):",
         reply_markup=cancel_kb
     )
-    await state.set_state(Link juger_for_link)
+    await state.set_state(LinkForm.waiting_for_link)
     await cb.answer()
 
 @router.message(StateFilter(LinkForm.waiting_for_link))
