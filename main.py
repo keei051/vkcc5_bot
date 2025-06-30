@@ -27,7 +27,7 @@ if not BOT_TOKEN or not VK_TOKEN:
 
 # Инициализация бота
 bot = Bot(BOT_TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
+dp = Dispatcher(storage=MemoryStorage())  # Исправлено: убрали bot из конструктора
 router = Router()
 dp.include_router(router)
 
@@ -48,6 +48,7 @@ class JsonStorage:
             with open(self.file_name, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except FileNotFoundError:
+            logger.info("Файл links.json не найден, создаётся новый")
             return {}
         except json.JSONDecodeError as e:
             logger.error(f"Ошибка чтения JSON: {e}")
@@ -157,6 +158,7 @@ def handle_error(handler):
 @router.message(Command("start"))
 @handle_error
 async def cmd_start(message: types.Message, state: FSMContext):
+    logger.info(f"Получена команда /start от пользователя {message.from_user.id}")
     await state.clear()
     await message.answer(
         "✨ Добро пожаловать! ✨\n🔗 Сокращайте ссылки\n📊 Смотрите статистику переходов\n\n⚠️ Примечание: Статистика показывает переходы, но VK API учитывает просмотры, что может включать не только клики.",
