@@ -29,7 +29,7 @@ if not BOT_TOKEN or not VK_TOKEN:
 bot = Bot(BOT_TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 router = Router()
-dp.include_router(router)
+dp.include_router(router)  # Подключаем роутер здесь, один раз
 
 # Класс состояний
 class LinkForm(StatesGroup):
@@ -278,7 +278,6 @@ async def main():
     logger.info("Запуск бота...")
     try:
         await bot.delete_webhook(drop_pending_updates=True)  # Удаляем webhook
-        dp.include_router(router)
         await dp.start_polling(bot)
     except Exception as e:
         logger.error(f"Ошибка бота: {e}")
