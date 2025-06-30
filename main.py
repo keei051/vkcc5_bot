@@ -39,7 +39,7 @@ class LinkForm(StatesGroup):
 
 # Класс для работы с JSON
 class JsonStorage:
-    def __init__(self, file_name='/data/links.json'):  # Путь для Railway Volume
+    def __init__(self, file_name='/data/links.json'):
         self.file_name = file_name
         self.data = self._load_data()
 
@@ -131,12 +131,14 @@ def make_kb(buttons, row_width=2):
 # Главное меню
 def get_main_menu():
     return make_kb([
-        InlineKeyboardButton('🔗 Сократить ссылку', callback_data='add_link'),
-        InlineKeyboardButton('📊 Статистика переходов', callback_data='stats'),
+        InlineKeyboardButton(text='🔗 Сократить ссылку', callback_data='add_link'),
+        InlineKeyboardButton(text='📊 Статистика переходов', callback_data='stats'),
     ])
 
 # Клавиатура отмены
-cancel_kb = make_kb([InlineKeyboardButton('🚫 Отмена', callback_data='cancel')])
+cancel_kb = make_kb([
+    InlineKeyboardButton(text='🚫 Отмена', callback_data='cancel')
+])
 
 # Декоратор обработки ошибок
 def handle_error(handler):
